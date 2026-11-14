@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # 
 #  E-TUNNEL VPN v1.0.0 MULTI-DISTRO
 #  Based on E-TUNNEL v6.8.2 — Rebranded & Upgraded by EMMKASH TECH
@@ -268,7 +268,19 @@ pkg_install() {
     local pkg="$1"
     echo -e "  ${CYAN}Installing: ${pkg}${NC}"
     case "$PKG" in
-        apt) DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" "$pkg" ;;
+        apt)
+            if ! DEBIAN_FRONTEND=noninteractive apt-get install -y \
+                -o Dpkg::Options::="--force-confdef" \
+                -o Dpkg::Options::="--force-confold" "$pkg" 2>/dev/null; then
+                # attempt to repair broken deps then retry once
+                DEBIAN_FRONTEND=noninteractive apt-get -f install -y \
+                    -o Dpkg::Options::="--force-confdef" \
+                    -o Dpkg::Options::="--force-confold" 2>/dev/null || true
+                dpkg --configure -a 2>/dev/null || true
+                DEBIAN_FRONTEND=noninteractive apt-get install -y \
+                    -o Dpkg::Options::="--force-confdef" \
+                    -o Dpkg::Options::="--force-confold" "$pkg" 2>/dev/null || true
+            fi ;;
         apk) apk add --no-cache "$pkg" ;;
         dnf) dnf install -y "$pkg" ;;
         yum) yum install -y "$pkg" ;;
@@ -915,12 +927,28 @@ echo -e "${YELLOW} [Pre] Initial Setup ${NC}"
 clean_pkg_locks
 echo -e "  ${GREEN} pkg locks clean${NC}"
 
+# Fix broken apt state before anything else (common on VPS after partial upgrades)
+if [ "$PKG" = "apt" ]; then
+    echo -e "  ${CYAN}Checking for broken packages...${NC}"
+    if apt-get check 2>&1 | grep -q "Unmet dep\|broken"; then
+        echo -e "  ${YELLOW}Broken packages detected — fixing...${NC}"
+        DEBIAN_FRONTEND=noninteractive apt-get -f install -y \
+            -o Dpkg::Options::="--force-confdef" \
+            -o Dpkg::Options::="--force-confold" 2>/dev/null || true
+        dpkg --configure -a 2>/dev/null || true
+        echo -e "  ${GREEN} Broken packages fixed${NC}"
+    fi
+fi
+
 if [ "$PKG" = "apt" ]; then
     echo -e "  ${CYAN}Updating system packages (this may take a few minutes)...${NC}"
     echo ""
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
-    apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
+    # repair any broken state before upgrading
+    apt-get -f install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" 2>/dev/null || true
+    dpkg --configure -a 2>/dev/null || true
+    apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" 2>/dev/null || true
     echo ""
     echo -e "  ${GREEN} apt update + upgrade done${NC}"
 fi
@@ -1051,19 +1079,29 @@ for g in $PACKAGES_GENERIC; do
     fi
 done
 
+# install pip3 if missing then install python packages
+if ! command -v pip3 >/dev/null 2>&1; then
+    pkg_install python3-pip || true
+fi
 if ! python3 -c "import flask" 2>/dev/null; then
     echo -e "  ${CYAN}Installing: flask (pip3)${NC}"
-    pip3 install flask --break-system-packages || pip3 install flask || true
+    pip3 install flask --break-system-packages 2>/dev/null || pip3 install flask 2>/dev/null || true
 fi
 if ! python3 -c "import websockets" 2>/dev/null; then
     echo -e "  ${CYAN}Installing: websockets (pip3)${NC}"
-    pip3 install websockets --break-system-packages || pip3 install websockets || true
+    pip3 install websockets --break-system-packages 2>/dev/null || pip3 install websockets 2>/dev/null || true
 fi
 
 if [ "$PKG" = "apt" ]; then
     echo "iptables-persistent iptables-persistent/autosave_v4 boolean true" | debconf-set-selections 2>/dev/null || true
     echo "iptables-persistent iptables-persistent/autosave_v6 boolean true" | debconf-set-selections 2>/dev/null || true
     pkg_install iptables-persistent || true
+fi
+
+# if nginx-full failed due to broken deps, fall back to plain nginx
+if ! command -v nginx >/dev/null 2>&1; then
+    echo -e "  ${CYAN}nginx-full unavailable — installing nginx...${NC}"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y nginx 2>/dev/null || true
 fi
 
 if [ -n "$MISSING" ]; then
