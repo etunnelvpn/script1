@@ -168,7 +168,7 @@ etunnel_cleanup() {
     rm -rf /var/log/letsencrypt 2>/dev/null
 
     # ── 11. Remove all E-TUNNEL scripts and files ────────────────────
-    rm -f /usr/local/bin/etunnel              2>/dev/null
+    rm -f /usr/local/bin/menu              2>/dev/null
     rm -f /usr/local/bin/etunnel-watchdog.sh  2>/dev/null
     rm -f /usr/local/bin/etunnel-quota-check.py 2>/dev/null
     rm -f /usr/local/bin/etunnel-switch-to-ovpn.sh    2>/dev/null
@@ -1208,6 +1208,10 @@ echo ""
 echo -e "${YELLOW} [4/23] Dropbear ${NC}"
 mkdir -p /etc/default
 
+# Pre-create /etc/issue.net so dropbear can read it at startup
+if [ ! -f /etc/issue.net ]; then
+    printf '+================================================+\n|          E-TUNNEL VPN BY EMMKASH TECH          |\n|           Contact: +254112735877               |\n+================================================+\n' > /etc/issue.net
+fi
 # Find dropbear binary
 DB_BIN=""
 for b in /usr/sbin/dropbear /usr/bin/dropbear /sbin/dropbear; do
@@ -1241,7 +1245,7 @@ After=network.target syslog.target
 
 [Service]
 Type=simple
-ExecStart=${DB_BIN} -F -w -p 444 -b /etc/issue.net
+ExecStart=${DB_BIN} -F -w -p 444
 Restart=always
 RestartSec=3
 KillMode=process
@@ -1643,6 +1647,12 @@ else
 BANNER
 fi
 cp /etc/issue.net /etc/motd
+# /etc/issue.net is now populated — add banner to dropbear and restart
+if [ -f /etc/systemd/system/dropbear.service ]; then
+    sed -i "s|-F -w -p 444 *$|-F -w -p 444 -b /etc/issue.net|" /etc/systemd/system/dropbear.service 2>/dev/null || true
+    systemctl daemon-reload 2>/dev/null || true
+    svc_restart dropbear 2>/dev/null || true
+fi
 sed -i '\|^Banner |d' /etc/ssh/sshd_config 2>/dev/null || true
 echo "Banner /etc/issue.net" >> /etc/ssh/sshd_config
 mkdir -p /etc/ssh/sshd_config.d
@@ -1686,8 +1696,8 @@ mkdir -p /etc/etunnel/accounts /root/etunnel-save
 touch /etc/etunnel/custom_ports.txt
 touch /etc/etunnel/accounts/{v2ray,trojan,ssh,udp}.txt
 
-repo_copy "panel/etunnel" "/usr/local/bin/etunnel" || \
-cat > /usr/local/bin/etunnel <<'PANEL'
+repo_copy "panel/etunnel" "/usr/local/bin/menu" || \
+cat > /usr/local/bin/menu <<'PANEL'
 #!/bin/bash
 # E-TUNNEL VPN Control Panel v1.0.0 by EMMKASH TECH
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'
@@ -1813,53 +1823,57 @@ get_vps_info
 count_accs
 
 echo -e "${MAGENTA}  ┌──────────────────────────────────────────────────────────┐${NC}"
-echo -e "${MAGENTA}  │       PREMIUM AUTOSCRIPT BY EMMKASH TECH                 │${NC}"
-echo -e "${MAGENTA}  │       Contact: +254112735877                             │${NC}"
-echo -e "${MAGENTA}  └──────────────────────────────────────────────────────────┘${NC}"
+# ── header ─────────────────────────────────────────────────────────────
+echo -e "${MAGENTA}"
+echo "  +--------------------------------------------------+"
+echo "  |     PREMIUM AUTOSCRIPT BY EMMKASH TECH           |"
+echo "  |     Contact: +254112735877                       |"
+echo "  +--------------------------------------------------+"
+echo -e "${NC}"
 echo ""
-
-echo -e "${CYAN}  ┌──────────────────────────────────────────────────────────┐${NC}"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "System OS"     "$OS_NAME"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "Core System"   "$CPU_CORES"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "Server RAM"    "${RAM_USED}/${RAM_TOTAL} MB"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "Uptime Server" "${UPTIME_MIN} minutes"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "Domain"        "$DOMAIN"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "IP VPS"        "$VPS_IP"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "ISP"           "$ISP"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "City"          "$CITY"
-echo -e "${CYAN}  └──────────────────────────────────────────────────────────┘${NC}"
+# ── server info ──────────────────────────────────────────────────────────
+echo -e "${CYAN}  +--------------------------------------------------+"
+printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "System OS"     "$OS_NAME"
+printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "Core System"   "$CPU_CORES"
+printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "Server RAM"    "${RAM_USED}/${RAM_TOTAL} MB"
+printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "Uptime Server" "${UPTIME_MIN} minutes"
+printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "Domain"        "$DOMAIN"
+printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "IP VPS"        "$VPS_IP"
+printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "ISP"           "$ISP"
+printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "City"          "$CITY"
+echo -e "  +--------------------------------------------------+${NC}"
 echo ""
-
-echo -e "  ${YELLOW}          >>> YOUR ACCOUNT ON VPS <<<${NC}"
-echo -e "${CYAN}  ┌──────────────────────────────────────────────────────────┐${NC}"
-printf "${CYAN}  │${NC}    SSH/OPENVPN      ${CYAN}►${NC} %-4s ACCOUNT PREMIUM                ${CYAN}│${NC}\n" "$SSH_COUNT"
-printf "${CYAN}  │${NC}    VMESS/WS/GRPC    ${CYAN}►${NC} %-4s ACCOUNT PREMIUM                ${CYAN}│${NC}\n" "$V2RAY_COUNT"
-printf "${CYAN}  │${NC}    VLESS/WS/GRPC    ${CYAN}►${NC} %-4s ACCOUNT PREMIUM                ${CYAN}│${NC}\n" "$V2RAY_COUNT"
-printf "${CYAN}  │${NC}    TROJAN/WS/GRPC   ${CYAN}►${NC} %-4s ACCOUNT PREMIUM                ${CYAN}│${NC}\n" "$TROJAN_COUNT"
-printf "${CYAN}  │${NC}    SHADOWSOCKS/WS   ${CYAN}►${NC} %-4s ACCOUNT PREMIUM                ${CYAN}│${NC}\n" "$UDP_COUNT"
-echo -e "${CYAN}  └──────────────────────────────────────────────────────────┘${NC}"
+# ── account counts ───────────────────────────────────────────────────────
+echo -e "${YELLOW}             >>> YOUR ACCOUNT ON VPS <<<${NC}"
+echo -e "${CYAN}  +--------------------------------------------------+"
+printf "  |   SSH/OPENVPN      > %-4d ACCOUNT PREMIUM         |\n" "$SSH_COUNT"
+printf "  |   VMESS/WS/GRPC    > %-4d ACCOUNT PREMIUM         |\n" "$V2RAY_COUNT"
+printf "  |   VLESS/WS/GRPC    > %-4d ACCOUNT PREMIUM         |\n" "$V2RAY_COUNT"
+printf "  |   TROJAN/WS/GRPC   > %-4d ACCOUNT PREMIUM         |\n" "$TROJAN_COUNT"
+printf "  |   SHADOWSOCKS/WS   > %-4d ACCOUNT PREMIUM         |\n" "$UDP_COUNT"
+echo -e "  +--------------------------------------------------+${NC}"
 echo ""
-
+# ── service status bar ───────────────────────────────────────────────────
 SSH_S=$(on_off dropbear); NGINX_S=$(on_off nginx)
-XRAY_S=$(svc_status xray && echo -e "${GREEN}●${NC}" || echo -e "${RED}●${NC}")
+XRAY_SVC=$(svc_status xray && echo -e "${GREEN}*${NC}" || echo -e "${RED}*${NC}")
 WS_S=$(on_off rocket-proxy); DROP_S=$(on_off dropbear)
-HAP_S=$(svc_status haproxy && echo -e "${GREEN}●${NC}" || echo -e "${RED}●${NC}")
-echo -e "${CYAN}  ┌──────────────────────┬──────────────────────┬────────────────────┐${NC}"
-printf "${CYAN}  │${NC} SSH    : %-13b${CYAN}│${NC} NGINX   : %-13b${CYAN}│${NC} XRAY  : %-11b${CYAN}│${NC}\n" "$SSH_S" "$NGINX_S" "$XRAY_S"
-printf "${CYAN}  │${NC} WS-ePRO: %-13b${CYAN}│${NC} DROPBEAR: %-13b${CYAN}│${NC} HAPROXY: %-10b${CYAN}│${NC}\n" "$WS_S" "$DROP_S" "$HAP_S"
-echo -e "${CYAN}  └──────────────────────┴──────────────────────┴────────────────────┘${NC}"
+HAP_SVC=$(svc_status haproxy && echo -e "${GREEN}*${NC}" || echo -e "${RED}*${NC}")
+echo -e "${CYAN}  +------------------+------------------+------------------+"
+printf "  | SSH    : %-9s | NGINX   : %-9s | XRAY   : %-8s |\n" "$SSH_S" "$NGINX_S" "$XRAY_SVC"
+printf "  | WS-ePRO: %-9s | DROPBEAR: %-9s | HAPROXY: %-8s |\n" "$WS_S" "$DROP_S" "$HAP_SVC"
+echo -e "  +------------------+------------------+------------------+${NC}"
 echo ""
-
-echo -e "${CYAN}  ┌──────────────────────────┬────────────────────────────┬──────────────────────┐${NC}"
-printf "${CYAN}  │${NC} ${YELLOW}[01]${NC} %-21s${CYAN}│${NC} ${YELLOW}[08]${NC} %-23s${CYAN}│${NC} ${YELLOW}[15]${NC} %-18s${CYAN}│${NC}\n" "SSH MENU"       "DELL ALL EXP"   "BCKP/RSTR"
-printf "${CYAN}  │${NC} ${YELLOW}[02]${NC} %-21s${CYAN}│${NC} ${YELLOW}[09]${NC} %-23s${CYAN}│${NC} ${YELLOW}[16]${NC} %-18s${CYAN}│${NC}\n" "VMESS MENU"     "AUTOREBOOT"     "REBOOT"
-printf "${CYAN}  │${NC} ${YELLOW}[03]${NC} %-21s${CYAN}│${NC} ${YELLOW}[10]${NC} %-23s${CYAN}│${NC} ${YELLOW}[17]${NC} %-18s${CYAN}│${NC}\n" "VLESS MENU"     "INFO PORT"      "RESTART"
-printf "${CYAN}  │${NC} ${YELLOW}[04]${NC} %-21s${CYAN}│${NC} ${YELLOW}[11]${NC} %-23s${CYAN}│${NC} ${YELLOW}[18]${NC} %-18s${CYAN}│${NC}\n" "TROJAN MENU"    "SPEEDTEST"      "DOMAIN"
-printf "${CYAN}  │${NC} ${YELLOW}[05]${NC} %-21s${CYAN}│${NC} ${YELLOW}[12]${NC} %-23s${CYAN}│${NC} ${YELLOW}[19]${NC} %-18s${CYAN}│${NC}\n" "SHADOW MENU"    "RUNNING"        "CERT SSL"
-printf "${CYAN}  │${NC} ${YELLOW}[06]${NC} %-21s${CYAN}│${NC} ${YELLOW}[13]${NC} %-23s${CYAN}│${NC} ${YELLOW}[20]${NC} %-18s${CYAN}│${NC}\n" "LIMIT SPEED"    "CLEAR LOG"      "INS. UDP"
-printf "${CYAN}  │${NC} ${YELLOW}[07]${NC} %-21s${CYAN}│${NC} ${YELLOW}[14]${NC} %-23s${CYAN}│${NC} ${YELLOW}[21]${NC} %-18s${CYAN}│${NC}\n" "VPS INFO"       "Cek Bandwith"   "CLEAR CACHE"
-printf "${CYAN}  │${NC} ${YELLOW}[22]${NC} %-21s${CYAN}│${NC} ${YELLOW}[23]${NC} %-23s${CYAN}│${NC}                      ${CYAN}│${NC}\n" "BOT NOTIF"      "UPDATE SCRIPT"
-echo -e "${CYAN}  └──────────────────────────┴────────────────────────────┴──────────────────────┘${NC}"
+# ── main menu ────────────────────────────────────────────────────────────
+echo -e "${CYAN}  +-----------------------+----------------------+--------------------+"
+echo "  | [01] SSH MENU         | [08] DELL ALL EXP    | [15] BCKP/RSTR     |"
+echo "  | [02] VMESS MENU       | [09] AUTOREBOOT      | [16] REBOOT        |"
+echo "  | [03] VLESS MENU       | [10] INFO PORT       | [17] RESTART       |"
+echo "  | [04] TROJAN MENU      | [11] SPEEDTEST       | [18] DOMAIN        |"
+echo "  | [05] SHADOW MENU      | [12] RUNNING         | [19] CERT SSL      |"
+echo "  | [06] LIMIT SPEED      | [13] CLEAR LOG       | [20] INS. UDP      |"
+echo "  | [07] VPS INFO         | [14] Cek Bandwith    | [21] CLEAR CACHE   |"
+echo "  | [22] BOT NOTIF        | [23] UPDATE SCRIPT   |                    |"
+echo -e "  +-----------------------+----------------------+--------------------+${NC}"
 echo ""
 echo -e "  ${GREEN}[25] CHANGE BANNER <<<${NC}"
 echo -e "  ${RED}[ 0] BACK TO EXIT MENU <<<${NC}"
@@ -2215,7 +2229,7 @@ PYTDEL
  12)
   clear
   echo -e "${CYAN}  ══════════════ SERVICE STATUS ══════════════${NC}"
-  for svc in haproxy "$STUNNEL_SVC" dropbear nginx xray rocket-proxy dnsmasq udp-custom vpn-panel openvpn@server openvpn-stunnel universal-bridge; do
+  for svc in haproxy "$STUNNEL_SVC" dropbear nginx xray rocket-proxy dnsmasq udp-custom vpn-panel openvpn@server universal-bridge; do
     svc_status "$svc" && echo -e "  ${GREEN}●${NC} $svc [RUNNING]" || echo -e "  ${RED}●${NC} $svc [STOPPED]"
   done; pause;;
 
@@ -2238,7 +2252,7 @@ PYTDEL
   case $BRC in
    1)
     BKFILE="/root/etunnel-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
-    tar czf "$BKFILE" /etc/etunnel /usr/local/bin/etunnel /usr/local/etc/xray/config.json 2>/dev/null
+    tar czf "$BKFILE" /etc/etunnel /usr/local/bin/menu /usr/local/etc/xray/config.json 2>/dev/null
     echo -e "  ${GREEN}Backup: $BKFILE${NC}";;
    2)
     ls /root/etunnel-backup-*.tar.gz 2>/dev/null || { echo -e "  ${YELLOW}No backups${NC}"; pause; continue; }
@@ -2335,16 +2349,16 @@ esac
 done
 PANEL
 
-chmod +x /usr/local/bin/etunnel
-bash -n /usr/local/bin/etunnel && check_ok "Panel syntax valid" || check_fail "Panel"
-cp /usr/local/bin/etunnel /root/etunnel-save/etunnel 2>/dev/null || true
+chmod +x /usr/local/bin/menu
+bash -n /usr/local/bin/menu && check_ok "Panel syntax valid" || check_fail "Panel"
+cp /usr/local/bin/menu /root/etunnel-save/etunnel 2>/dev/null || true
 
 if ! grep -q "E-TUNNEL-AUTO-PANEL" /root/.bashrc 2>/dev/null; then
 cat >> /root/.bashrc <<'RC'
 # E-TUNNEL-AUTO-PANEL
-if [ -t 0 ] && [ -x /usr/local/bin/etunnel ] && [ -z "$ETUNNEL_AUTO_PANEL" ]; then
+if [ -t 0 ] && [ -x /usr/local/bin/menu ] && [ -z "$ETUNNEL_AUTO_PANEL" ]; then
     export ETUNNEL_AUTO_PANEL=1
-    /usr/local/bin/etunnel
+    /usr/local/bin/menu
 fi
 RC
 fi
@@ -3141,7 +3155,7 @@ echo -e "   User: ${GREEN}${PANEL_USER}${NC}  Pass: ${GREEN}${PANEL_PASS}${NC}"
 echo ""
 echo -e "   Details saved to: ${YELLOW}/root/etunnel-links.txt${NC}"
 echo ""
-echo -e "${YELLOW} Type 'etunnel' anytime to open the control panel${NC}"
+echo -e "${YELLOW} Type 'menu' anytime to open the control panel${NC}"
 echo -e "${YELLOW} Opening panel in 3 seconds...${NC}"
 sleep 3
-/usr/local/bin/etunnel || true
+/usr/local/bin/menu || true
