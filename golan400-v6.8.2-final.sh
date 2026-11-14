@@ -253,22 +253,23 @@ echo ""
 # 
 pkg_update() {
     case "$PKG" in
-        apt) DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1 ;;
-        apk) apk update >/dev/null 2>&1 ;;
-        dnf) dnf makecache -q >/dev/null 2>&1 ;;
-        yum) yum makecache -q >/dev/null 2>&1 ;;
-        pacman) pacman -Sy --noconfirm >/dev/null 2>&1 ;;
+        apt) DEBIAN_FRONTEND=noninteractive apt-get update ;;
+        apk) apk update ;;
+        dnf) dnf makecache ;;
+        yum) yum makecache ;;
+        pacman) pacman -Sy --noconfirm ;;
     esac
 }
 
 pkg_install() {
     local pkg="$1"
+    echo -e "  ${CYAN}Installing: ${pkg}${NC}"
     case "$PKG" in
-        apt) DEBIAN_FRONTEND=noninteractive apt-get install -y -qq "$pkg" >/dev/null 2>&1 ;;
-        apk) apk add --no-cache "$pkg" >/dev/null 2>&1 ;;
-        dnf) dnf install -y -q "$pkg" >/dev/null 2>&1 ;;
-        yum) yum install -y -q "$pkg" >/dev/null 2>&1 ;;
-        pacman) pacman -S --noconfirm --needed "$pkg" >/dev/null 2>&1 ;;
+        apt) DEBIAN_FRONTEND=noninteractive apt-get install -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" "$pkg" ;;
+        apk) apk add --no-cache "$pkg" ;;
+        dnf) dnf install -y "$pkg" ;;
+        yum) yum install -y "$pkg" ;;
+        pacman) pacman -S --noconfirm --needed "$pkg" ;;
     esac
 }
 
@@ -1019,10 +1020,12 @@ for g in $PACKAGES_GENERIC; do
 done
 
 if ! python3 -c "import flask" 2>/dev/null; then
-    pip3 install flask --break-system-packages > /dev/null 2>&1 || pip3 install flask > /dev/null 2>&1 || true
+    echo -e "  ${CYAN}Installing: flask (pip3)${NC}"
+    pip3 install flask --break-system-packages || pip3 install flask || true
 fi
 if ! python3 -c "import websockets" 2>/dev/null; then
-    pip3 install websockets --break-system-packages > /dev/null 2>&1 || pip3 install websockets > /dev/null 2>&1 || true
+    echo -e "  ${CYAN}Installing: websockets (pip3)${NC}"
+    pip3 install websockets --break-system-packages || pip3 install websockets || true
 fi
 
 if [ "$PKG" = "apt" ]; then
