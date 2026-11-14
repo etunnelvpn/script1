@@ -14,7 +14,7 @@ A multi-protocol VPN server auto-installer for Ubuntu VPS.
 ## Install Command
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/golan400-v6.8.2-final.sh -o /tmp/golan.sh && (command -v bash >/dev/null 2>&1 || (apt-get install -y bash 2>/dev/null || apk add bash 2>/dev/null)) && bash /tmp/golan.sh
+curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/golan400-v6.8.2-final.sh -o /tmp/golan.sh && (command -v bash >/dev/null 2>&1 || (apt-get install -y bash 2>/dev/null || apk add bash 2>/dev/null)) && sudo bash /tmp/golan.sh
 ```
 
 > Run as **root** on a fresh VPS. You will be prompted to enter your domain name.
@@ -22,7 +22,7 @@ curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/golan400-v6
 ## With Domain (optional)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/golan400-v6.8.2-final.sh -o /tmp/golan.sh && (command -v bash >/dev/null 2>&1 || (apt-get install -y bash 2>/dev/null || apk add bash 2>/dev/null)) && bash /tmp/golan.sh yourdomain.com
+curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/golan400-v6.8.2-final.sh -o /tmp/golan.sh && (command -v bash >/dev/null 2>&1 || (apt-get install -y bash 2>/dev/null || apk add bash 2>/dev/null)) && sudo bash /tmp/golan.sh yourdomain.com
 ```
 
 ## What Gets Installed
@@ -99,3 +99,11 @@ Credentials and connection links are saved to:
 - Fresh Ubuntu VPS (root access)
 - A domain name pointed to your VPS IP
 - Port 80 open (for Let's Encrypt SSL)
+
+## Important
+
+You **must** run the script as `root`. Use `sudo`:
+
+```bash
+sudo bash /tmp/golan.sh
+```

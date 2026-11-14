@@ -38,6 +38,17 @@ export GOLAN_AUTO_PANEL=1
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
 BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
+
+# ---------------------------------------------------------------
+#  ROOT CHECK — must be root, fail immediately if not
+# ---------------------------------------------------------------
+if [ "$(id -u)" -ne 0 ]; then
+    echo -e "${RED}[!] This script must be run as root${NC}"
+    echo -e "${YELLOW}    Try: sudo bash $0${NC}"
+    echo -e "${YELLOW}    Or:  sudo -i && bash $0${NC}"
+    exit 1
+fi
+
 LOG_FILE="/root/golan400-install.log"
 > "$LOG_FILE"
 
