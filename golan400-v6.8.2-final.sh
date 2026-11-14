@@ -52,6 +52,8 @@ fi
 LOG_FILE="/root/golan400-install.log"
 > "$LOG_FILE"
 
+log() { echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"; }
+
 # 
 #  GOLAN400 CLEANUP — remove old installation before fresh install
 # 
@@ -373,8 +375,6 @@ svc_exists()  { case "$INIT_SYS" in systemd) systemctl list-unit-files "$1.servi
 svc_daemon_reload() { [ "$INIT_SYS" = "systemd" ] && systemctl daemon-reload 2>/dev/null; return 0; }
 svc_mask()    { [ "$INIT_SYS" = "systemd" ] && systemctl mask "$1" 2>/dev/null; return 0; }
 svc_unmask()  { [ "$INIT_SYS" = "systemd" ] && systemctl unmask "$1" 2>/dev/null; return 0; }
-
-log() { echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"; }
 
 check_ok() {
     if [ $? -eq 0 ]; then echo -e "  ${GREEN} $1${NC}"; log " $1"; return 0
