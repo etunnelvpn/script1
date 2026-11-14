@@ -7,7 +7,7 @@ One command installs and configures everything: SSH, VLESS, VMESS, Trojan, OpenV
 
 ---
 
-## ⚡ Install — Run This One Command on Your VPS
+## Install — Run This One Command on Your VPS
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel.sh && bash /tmp/etunnel.sh
