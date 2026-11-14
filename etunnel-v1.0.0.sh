@@ -60,158 +60,182 @@ log() { echo -e "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"; }
 #  E-TUNNEL CLEANUP — remove old installation before fresh install
 # 
 etunnel_cleanup() {
-    echo -e "${CYAN}[Clean] Removing old E-TUNNEL installation...${NC}"
-    log "=== CLEANUP START ==="
+    echo -e "${CYAN}[Clean] Removing old E-TUNNEL installation and resetting VPS...${NC}"
+    log "=== FULL CLEANUP START ==="
 
-    # detect init system for service commands
     local _INIT="unknown"
     [ -d /run/systemd/system ] && command -v systemctl >/dev/null 2>&1 && _INIT="systemd"
     command -v rc-service >/dev/null 2>&1 && _INIT="openrc"
 
-    # 1. Stop all E-TUNNEL services
-    local _SERVICES="etunnel-watchdog etunnel-watchdog.timer etunnel-quota-check etunnel-quota-check.timer \
-        etunnel-net-recovery certbot-renew-etunnel certbot-renew-etunnel.timer \
-        universal-bridge rocket-proxy udp-custom vpn-panel openvpn-stunnel \
-        payload-proxy ovpn-ws-bridge xray"
-    for s in $_SERVICES; do
+    # ── 1. Stop ALL VPN-related services ─────────────────────────────
+    local _SVCS="etunnel-watchdog etunnel-quota-check etunnel-net-recovery \
+        certbot-renew-etunnel universal-bridge rocket-proxy udp-custom vpn-panel \
+        openvpn-stunnel payload-proxy ovpn-ws-bridge xray \
+        haproxy nginx stunnel4 stunnel dropbear dnsmasq \
+        openvpn@server openvpn fail2ban"
+    for s in $_SVCS; do
         case "$_INIT" in
             systemd) systemctl stop "$s" 2>/dev/null; systemctl disable "$s" 2>/dev/null ;;
-            openrc) rc-service "$s" stop 2>/dev/null; rc-update del "$s" default 2>/dev/null ;;
+            openrc)  rc-service "$s" stop 2>/dev/null; rc-update del "$s" default 2>/dev/null ;;
         esac
     done
 
-    # also stop standard services that E-TUNNEL manages
-    for s in haproxy nginx stunnel4 stunnel dropbear dnsmasq openvpn@server openvpn fail2ban; do
-        case "$_INIT" in
-            systemd) systemctl stop "$s" 2>/dev/null ;;
-            openrc) rc-service "$s" stop 2>/dev/null ;;
-        esac
-    done
+    # ── 2. Kill any leftover processes ───────────────────────────────
+    pkill -9 -f "xray"            2>/dev/null || true
+    pkill -9 -f "universal-bridge" 2>/dev/null || true
+    pkill -9 -f "rocket-proxy"    2>/dev/null || true
+    pkill -9 -f "etunnel-watchdog" 2>/dev/null || true
+    pkill -9 -f "etunnel-quota"   2>/dev/null || true
+    pkill -9 -f "udp-custom"      2>/dev/null || true
+    pkill -9 -f "vpn-panel"       2>/dev/null || true
+    pkill -9 -f "dropbear"        2>/dev/null || true
+    pkill -9 -f "dnsmasq"         2>/dev/null || true
 
-    # 2. Remove E-TUNNEL systemd service + timer files
-    for f in etunnel-watchdog.service etunnel-watchdog.timer \
+    # ── 3. Free all ports we use ─────────────────────────────────────
+    for port in 80 443 444 1194 4443 5353 8080 8081 8090 8444 \
+                10085 10086 10087 10088 10089 10090 10091; do
+        fuser -k ${port}/tcp 2>/dev/null || true
+        fuser -k ${port}/udp 2>/dev/null || true
+    done
+    sleep 1
+
+    # ── 4. Purge ALL VPN packages completely ─────────────────────────
+    if command -v apt-get >/dev/null 2>&1; then
+        echo -e "  ${CYAN}Purging VPN packages...${NC}"
+        DEBIAN_FRONTEND=noninteractive apt-get purge -y \
+            haproxy nginx nginx-full nginx-common libnginx-mod-stream \
+            stunnel4 dropbear dropbear-bin \
+            openvpn easy-rsa \
+            dnsmasq dnsmasq-base \
+            fail2ban \
+            nodejs \
+            2>/dev/null || true
+        DEBIAN_FRONTEND=noninteractive apt-get autoremove -y 2>/dev/null || true
+        DEBIAN_FRONTEND=noninteractive apt-get autoclean -y  2>/dev/null || true
+    fi
+
+    # ── 5. Remove Xray completely ────────────────────────────────────
+    if [ -f /usr/local/bin/xray ]; then
+        bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ remove 2>/dev/null || true
+        rm -f /usr/local/bin/xray 2>/dev/null || true
+        rm -rf /usr/local/etc/xray 2>/dev/null || true
+        rm -rf /var/log/xray 2>/dev/null || true
+    fi
+
+    # ── 6. Remove ALL E-TUNNEL / GOLAN systemd units ─────────────────
+    for f_unit in etunnel-watchdog.service etunnel-watchdog.timer \
              etunnel-quota-check.service etunnel-quota-check.timer \
-             etunnel-net-recovery.service certbot-renew-etunnel.service certbot-renew-etunnel.timer \
-             universal-bridge.service rocket-proxy.service udp-custom.service \
-             vpn-panel.service openvpn-stunnel.service payload-proxy.service \
-             ovpn-ws-bridge.service; do
-        rm -f "/etc/systemd/system/$f" 2>/dev/null
+             etunnel-net-recovery.service certbot-renew-etunnel.service \
+             certbot-renew-etunnel.timer universal-bridge.service \
+             rocket-proxy.service udp-custom.service vpn-panel.service \
+             openvpn-stunnel.service payload-proxy.service ovpn-ws-bridge.service; do
+        rm -f "/etc/systemd/system/$f_unit" 2>/dev/null
     done
 
-    # 3. Remove systemd drop-ins
-    for svc in haproxy nginx dropbear stunnel4 stunnel xray payload-proxy rocket-proxy dnsmasq udp-custom openvpn-stunnel vpn-panel universal-bridge; do
+    # ── 7. Remove systemd drop-ins ───────────────────────────────────
+    for svc in haproxy nginx dropbear stunnel4 stunnel xray payload-proxy \
+               rocket-proxy dnsmasq udp-custom openvpn-stunnel vpn-panel \
+               universal-bridge; do
         rm -rf "/etc/systemd/system/${svc}.service.d" 2>/dev/null
     done
 
-    # 4. Remove OpenRC init scripts
-    for svc in universal-bridge rocket-proxy udp-custom vpn-panel openvpn-stunnel etunnel-watchdog etunnel-quota-check; do
-        rm -f "/etc/init.d/$svc" 2>/dev/null
-        rm -f "/etc/conf.d/$svc" 2>/dev/null
+    # ── 8. Remove OpenRC scripts ─────────────────────────────────────
+    for svc in universal-bridge rocket-proxy udp-custom vpn-panel \
+               openvpn-stunnel etunnel-watchdog etunnel-quota-check; do
+        rm -f "/etc/init.d/$svc" "/etc/conf.d/$svc" 2>/dev/null
     done
 
-    # 5. Remove cron entries for etunnel
-    crontab -l 2>/dev/null | grep -v "etunnel" | grep -v "certbot renew" | crontab - 2>/dev/null || true
-
-    # 6. Remove E-TUNNEL scripts from /usr/local/bin
-    rm -f /usr/local/bin/etunnel 2>/dev/null
-    rm -f /usr/local/bin/etunnel-watchdog.sh 2>/dev/null
-    rm -f /usr/local/bin/etunnel-quota-check.py 2>/dev/null
-    rm -f /usr/local/bin/etunnel-switch-to-ovpn.sh 2>/dev/null
-    rm -f /usr/local/bin/etunnel-switch-to-etunnel.sh 2>/dev/null
-
-    # 7. Remove E-TUNNEL directories
-    rm -rf /etc/etunnel 2>/dev/null
-    rm -rf /etc/golan 2>/dev/null
+    # ── 9. Remove ALL config directories ─────────────────────────────
+    rm -rf /etc/etunnel       2>/dev/null
+    rm -rf /etc/golan         2>/dev/null
     rm -rf /opt/universal-bridge 2>/dev/null
-    rm -rf /opt/rocket 2>/dev/null
-    rm -rf /opt/vpn-panel 2>/dev/null
-    rm -rf /root/udp 2>/dev/null
+    rm -rf /opt/rocket        2>/dev/null
+    rm -rf /opt/vpn-panel     2>/dev/null
+    rm -rf /root/udp          2>/dev/null
     rm -rf /root/etunnel-save 2>/dev/null
+    rm -rf /etc/haproxy       2>/dev/null
+    rm -rf /etc/stunnel       2>/dev/null
+    rm -rf /etc/openvpn       2>/dev/null
+    rm -rf /etc/nginx         2>/dev/null
+    rm -rf /etc/dnsmasq.d     2>/dev/null
+    rm -f  /etc/dnsmasq.conf  2>/dev/null
+    rm -f  /etc/default/dropbear 2>/dev/null
+    rm -f  /etc/default/openvpn  2>/dev/null
 
-    # 8. Remove E-TUNNEL config files
-    rm -f /etc/issue.net 2>/dev/null
-    rm -f /etc/stunnel/stunnel.conf 2>/dev/null
-    rm -f /etc/stunnel/stunnel.conf.disabled 2>/dev/null
-    rm -f /etc/stunnel/openvpn.conf 2>/dev/null
-    rm -f /etc/stunnel/openvpn.conf.disabled 2>/dev/null
-    rm -f /etc/haproxy/ssl.pem 2>/dev/null
-    rm -f /etc/nginx/sites-enabled/xray-proxy 2>/dev/null
-    rm -f /etc/nginx/sites-enabled/default 2>/dev/null
-    rm -rf /etc/nginx/stream-enabled 2>/dev/null
-    rm -f /usr/local/etc/xray/config.json 2>/dev/null
-    rm -rf /etc/systemd/system/xray.service.d 2>/dev/null
+    # ── 10. Remove Let's Encrypt certs (force fresh cert on reinstall) ─
+    rm -rf /etc/letsencrypt   2>/dev/null
+    rm -rf /var/lib/letsencrypt 2>/dev/null
+    rm -rf /var/log/letsencrypt 2>/dev/null
 
-    # 9. Remove E-TUNNEL log files
+    # ── 11. Remove all E-TUNNEL scripts and files ────────────────────
+    rm -f /usr/local/bin/etunnel              2>/dev/null
+    rm -f /usr/local/bin/etunnel-watchdog.sh  2>/dev/null
+    rm -f /usr/local/bin/etunnel-quota-check.py 2>/dev/null
+    rm -f /usr/local/bin/etunnel-switch-to-ovpn.sh    2>/dev/null
+    rm -f /usr/local/bin/etunnel-switch-to-etunnel.sh 2>/dev/null
+    rm -f /etc/issue.net           2>/dev/null
+    rm -f /root/etunnel-links.txt  2>/dev/null
     rm -f /root/etunnel-install.log 2>/dev/null
-    rm -f /root/etunnel-links.txt 2>/dev/null
     rm -f /root/etunnel-browser-dialer-README.txt 2>/dev/null
     rm -f /var/log/etunnel-watchdog.log 2>/dev/null
-    rm -f /var/log/etunnel-quota.log 2>/dev/null
-    rm -f /var/run/etunnel-quota.lock 2>/dev/null
+    rm -f /var/log/etunnel-quota.log    2>/dev/null
+    rm -f /var/run/etunnel-quota.lock   2>/dev/null
 
-    # 10. Remove E-TUNNEL sysctl entries
+    # ── 12. Remove cron entries ──────────────────────────────────────
+    crontab -l 2>/dev/null | grep -v "etunnel" | grep -v "certbot" | crontab - 2>/dev/null || true
+
+    # ── 13. Clean sysctl entries ─────────────────────────────────────
     if [ -f /etc/sysctl.conf ]; then
         sed -i '/etunnel-disable-ipv6/,+3d' /etc/sysctl.conf 2>/dev/null
-        sed -i '/etunnel-tcp-tuning/,+23d' /etc/sysctl.conf 2>/dev/null
+        sed -i '/etunnel-tcp-tuning/,+23d'  /etc/sysctl.conf 2>/dev/null
+        sed -i '/E-TUNNEL/d'                /etc/sysctl.conf 2>/dev/null
     fi
-    rm -f /etc/sysctl.d/99-openvpn.conf 2>/dev/null
-
-    # 11. Remove E-TUNNEL module configs
-    rm -f /etc/modules-load.d/etunnel-bbr.conf 2>/dev/null
-    rm -f /etc/modules-load.d/zram.conf 2>/dev/null
-
-    # 12. Remove E-TUNNEL security configs
+    rm -f /etc/sysctl.d/99-openvpn.conf          2>/dev/null
+    rm -f /etc/modules-load.d/etunnel-bbr.conf   2>/dev/null
+    rm -f /etc/modules-load.d/zram.conf          2>/dev/null
     rm -f /etc/security/limits.d/99-etunnel.conf 2>/dev/null
-    rm -f /etc/security/pwquality.conf 2>/dev/null
+    rm -f /etc/security/pwquality.conf           2>/dev/null
+    rm -f /etc/fail2ban/jail.local               2>/dev/null
+    rm -rf /etc/systemd/journald.conf.d          2>/dev/null
 
-    # 13. Remove E-TUNNEL fail2ban config
-    rm -f /etc/fail2ban/jail.local 2>/dev/null
-
-    # 14. Remove E-TUNNEL journald config
-    rm -f /etc/systemd/journald.conf.d/99-etunnel-persistent.conf 2>/dev/null
-    rmdir /etc/systemd/journald.conf.d 2>/dev/null
-
-    # 15. Remove E-TUNNEL SSH config additions
+    # ── 14. Clean SSH config ─────────────────────────────────────────
     if [ -f /etc/ssh/sshd_config ]; then
-        sed -i '/E-TUNNEL/d' /etc/ssh/sshd_config 2>/dev/null
-        sed -i '/^Banner /d' /etc/ssh/sshd_config 2>/dev/null
+        sed -i '/E-TUNNEL/d'   /etc/ssh/sshd_config 2>/dev/null
+        sed -i '/^Banner /d'   /etc/ssh/sshd_config 2>/dev/null
+        sed -i '/^Ciphers /d'  /etc/ssh/sshd_config 2>/dev/null
+        sed -i '/^MACs /d'     /etc/ssh/sshd_config 2>/dev/null
+        sed -i '/^KexAlgorithms /d'            /etc/ssh/sshd_config 2>/dev/null
+        sed -i '/^HostKeyAlgorithms /d'        /etc/ssh/sshd_config 2>/dev/null
+        sed -i '/^PubkeyAcceptedAlgorithms /d' /etc/ssh/sshd_config 2>/dev/null
+        sed -i '/^ClientAliveInterval /d'      /etc/ssh/sshd_config 2>/dev/null
+        sed -i '/^ClientAliveCountMax /d'      /etc/ssh/sshd_config 2>/dev/null
+        sed -i '/^TCPKeepAlive /d'             /etc/ssh/sshd_config 2>/dev/null
     fi
     rm -f /etc/ssh/sshd_config.d/00-etunnel-banner.conf 2>/dev/null
 
-    # 16. Remove E-TUNNEL dropbear config (if ours)
-    if [ -f /etc/default/dropbear ] && grep -q "DROPBEAR_PORT=444" /etc/default/dropbear 2>/dev/null; then
-        rm -f /etc/default/dropbear 2>/dev/null
-    fi
-
-    # 17. Remove E-TUNNEL bashrc entry
-    sed -i '/E-TUNNEL-AUTO-PANEL/d' /root/.bashrc 2>/dev/null
+    # ── 15. Clean .bashrc ────────────────────────────────────────────
+    sed -i '/E-TUNNEL-AUTO-PANEL/d'    /root/.bashrc 2>/dev/null
     sed -i '/E-TUNNEL-AUTO-PANEL/,/fi/d' /root/.bashrc 2>/dev/null
 
-    # 18. Remove E-TUNNEL iptables rules
+    # ── 16. Remove iptables rules ────────────────────────────────────
     iptables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 5353 2>/dev/null || true
-    iptables -t nat -D OUTPUT -p udp --dport 53 -j REDIRECT --to-ports 5353 2>/dev/null || true
+    iptables -t nat -D OUTPUT     -p udp --dport 53 -j REDIRECT --to-ports 5353 2>/dev/null || true
     iptables -t nat -D POSTROUTING -s 10.8.0.0/24 -j MASQUERADE 2>/dev/null || true
     iptables -D INPUT -p tcp --dport 8090 -m conntrack --ctstate NEW -m recent --set --name vpnpanel 2>/dev/null || true
     iptables -D INPUT -p tcp --dport 8090 -m conntrack --ctstate NEW -m recent --update --seconds 60 --hitcount 20 --name vpnpanel -j DROP 2>/dev/null || true
+    iptables -D FORWARD -i tun0 -j ACCEPT 2>/dev/null || true
+    iptables -D FORWARD -o tun0 -j ACCEPT 2>/dev/null || true
 
-    # 19. Reload systemd
-    case "$_INIT" in
-        systemd) systemctl daemon-reload 2>/dev/null ;;
-    esac
+    # ── 17. Reload systemd ───────────────────────────────────────────
+    [ "$_INIT" = "systemd" ] && systemctl daemon-reload 2>/dev/null || true
 
-    # 20. Kill leftover processes
-    pkill -9 -f "universal-bridge" 2>/dev/null || true
-    pkill -9 -f "rocket-proxy" 2>/dev/null || true
-    pkill -9 -f "etunnel-watchdog" 2>/dev/null || true
-    pkill -9 -f "etunnel-quota-check" 2>/dev/null || true
-    pkill -9 -f "udp-custom" 2>/dev/null || true
-    pkill -9 -f "vpn-panel" 2>/dev/null || true
+    # ── 18. Restart SSH so it stays accessible ───────────────────────
+    systemctl restart ssh 2>/dev/null || systemctl restart sshd 2>/dev/null || true
 
-    echo -e "  ${GREEN}Clean done${NC}"
-    log "=== CLEANUP DONE ==="
+    echo -e "  ${GREEN}Full VPS reset done — ready for clean install${NC}"
+    log "=== FULL CLEANUP DONE ==="
     echo ""
 }
-
 # Run cleanup (always — safe even if nothing installed)
 etunnel_cleanup
 
@@ -1198,13 +1222,18 @@ DROPBEAR_PORT=444
 DROPBEAR_EXTRA_ARGS="-w -p 444"
 EOF
     # Ubuntu 22.04 uses systemd for dropbear — /etc/default is ignored
-    # Create a systemd override to set the correct port
+    # Find the actual dropbear binary and create a systemd override
     if [ "$INIT_SYS" = "systemd" ]; then
+        DB_BIN=""
+        for b in /usr/sbin/dropbear /usr/bin/dropbear /sbin/dropbear; do
+            [ -x "$b" ] && DB_BIN="$b" && break
+        done
+        if [ -z "$DB_BIN" ]; then DB_BIN=$(command -v dropbear 2>/dev/null || echo "/usr/sbin/dropbear"); fi
         mkdir -p /etc/systemd/system/dropbear.service.d
         cat > /etc/systemd/system/dropbear.service.d/override.conf <<EOF
 [Service]
 ExecStart=
-ExecStart=/usr/sbin/dropbear -F -w -p 444 -b /etc/issue.net
+ExecStart=${DB_BIN} -F -w -p 444 -b /etc/issue.net
 EOF
         systemctl daemon-reload 2>/dev/null || true
     fi
@@ -1528,7 +1557,15 @@ echo ""
 
 echo -e "${YELLOW} [11/23] Starting services ${NC}"
 svc_enable dropbear "$STUNNEL_SVC" haproxy nginx xray rocket-proxy universal-bridge >/dev/null 2>&1
-echo -e "  ${CYAN}dropbear...${NC}"; svc_restart dropbear; sleep 1; check_service "dropbear" || check_fail "dropbear"
+echo -e "  ${CYAN}dropbear...${NC}"
+systemctl daemon-reload 2>/dev/null || true
+svc_restart dropbear; sleep 2
+if ! check_service "dropbear" 2>/dev/null; then
+    warn "dropbear failed — retrying once..."
+    systemctl daemon-reload 2>/dev/null || true
+    svc_restart dropbear; sleep 2
+    check_service "dropbear" 2>/dev/null || warn "dropbear still failed — SSH port 22 still works, continuing"
+fi
 echo -e "  ${CYAN}${STUNNEL_SVC}...${NC}"; svc_restart "$STUNNEL_SVC"; sleep 1; check_service "$STUNNEL_SVC" || check_fail "stunnel"
 fuser -k 8080/tcp 8081/tcp >/dev/null 2>&1 || true
 sleep 1
