@@ -705,7 +705,7 @@ try_letsencrypt() {
     sleep 1
     if certbot certonly --standalone -d "$DOMAIN" --non-interactive --agree-tos \
         -m "admin@${DOMAIN}" --preferred-challenges http --http-01-port 80 \
-        --keep-until-expiring >> "$LOG_FILE" 2>&1; then
+        --keep-until-expiring; then
         return 0
     fi
     return 1
@@ -1358,7 +1358,8 @@ echo ""
 echo -e "${YELLOW} [10/23] Xray ${NC}"
 pkill -9 -f install-release 2>/dev/null || true
 pkill -9 -f xray 2>/dev/null || true
-bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install >> "$LOG_FILE" 2>&1
+echo -e "  ${CYAN}Downloading and installing Xray...${NC}"
+bash -c "$(curl -L https://github.com/XTLS/Xray-install/raw/main/install-release.sh)" @ install
 [ -f "/usr/local/bin/xray" ] && check_ok "Xray installed" || check_fail "Xray"
 rm -rf /etc/systemd/system/xray.service.d/
 svc_daemon_reload
@@ -2243,11 +2244,13 @@ echo ""
 echo -e "${YELLOW} [19b/23] UDP Custom ${NC}"
 mkdir -p /root/udp
 if [ ! -f /root/udp/udp-custom ]; then
-    wget -q --no-check-certificate "https://github.com/etunnelvpn/UDP-Custom-Script/raw/main/udp-custom-linux-amd64" -O /root/udp/udp-custom 2>/dev/null || warn "udp-custom download failed"
+    echo -e "  ${CYAN}Downloading UDP Custom binary...${NC}"
+    wget --no-check-certificate "https://github.com/etunnelvpn/UDP-Custom-Script/raw/main/udp-custom-linux-amd64" -O /root/udp/udp-custom || warn "udp-custom download failed"
     chmod +x /root/udp/udp-custom 2>/dev/null || true
 fi
 if [ ! -f /root/udp/config.json ]; then
-    wget -q --no-check-certificate "https://raw.githubusercontent.com/etunnelvpn/UDP-Custom-Script/main/config.json" -O /root/udp/config.json 2>/dev/null || warn "config download failed"
+    echo -e "  ${CYAN}Downloading UDP Custom config...${NC}"
+    wget --no-check-certificate "https://raw.githubusercontent.com/etunnelvpn/UDP-Custom-Script/main/config.json" -O /root/udp/config.json || warn "config download failed"
 fi
 create_simple_service "udp-custom" "UDP Custom" "/root/udp/udp-custom server" "network.target" "" "/root/udp/"
 svc_enable udp-custom
