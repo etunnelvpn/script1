@@ -1207,35 +1207,50 @@ echo ""
 
 echo -e "${YELLOW} [4/23] Dropbear ${NC}"
 mkdir -p /etc/default
+
+# Find dropbear binary
+DB_BIN=""
+for b in /usr/sbin/dropbear /usr/bin/dropbear /sbin/dropbear; do
+    [ -x "$b" ] && DB_BIN="$b" && break
+done
+[ -z "$DB_BIN" ] && DB_BIN=$(command -v dropbear 2>/dev/null || echo "/usr/sbin/dropbear")
+
 if [ "$PKG" = "apk" ]; then
-    backup_file /etc/conf.d/dropbear
     cat > /etc/conf.d/dropbear <<EOF
 DROPBEAR_OPTS="-w -p 444"
 DROPBEAR_BANNER="/etc/issue.net"
 EOF
     svc_enable dropbear >/dev/null 2>&1 || true
 else
-    backup_file /etc/default/dropbear
+    # Set NO_START=0 so the SysV wrapper allows start
     cat > /etc/default/dropbear <<EOF
 NO_START=0
 DROPBEAR_PORT=444
-DROPBEAR_EXTRA_ARGS="-w -p 444"
+DROPBEAR_EXTRA_ARGS="-w -p 444 -b /etc/issue.net"
 EOF
-    # Ubuntu 22.04 uses systemd for dropbear — /etc/default is ignored
-    # Find the actual dropbear binary and create a systemd override
+
     if [ "$INIT_SYS" = "systemd" ]; then
-        DB_BIN=""
-        for b in /usr/sbin/dropbear /usr/bin/dropbear /sbin/dropbear; do
-            [ -x "$b" ] && DB_BIN="$b" && break
-        done
-        if [ -z "$DB_BIN" ]; then DB_BIN=$(command -v dropbear 2>/dev/null || echo "/usr/sbin/dropbear"); fi
-        mkdir -p /etc/systemd/system/dropbear.service.d
-        cat > /etc/systemd/system/dropbear.service.d/override.conf <<EOF
+        # Ubuntu 22.04: dropbear ships as SysV wrapper — bypass it entirely
+        # Create a native systemd unit that runs dropbear directly
+        rm -f /etc/systemd/system/dropbear.service 2>/dev/null || true
+        rm -rf /etc/systemd/system/dropbear.service.d 2>/dev/null || true
+        cat > /etc/systemd/system/dropbear.service <<EOF
+[Unit]
+Description=Dropbear SSH server on port 444
+After=network.target syslog.target
+
 [Service]
-ExecStart=
+Type=simple
 ExecStart=${DB_BIN} -F -w -p 444 -b /etc/issue.net
+Restart=always
+RestartSec=3
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
 EOF
         systemctl daemon-reload 2>/dev/null || true
+        systemctl enable dropbear 2>/dev/null || true
     fi
 fi
 check_ok "Dropbear config"

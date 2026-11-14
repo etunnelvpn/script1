@@ -1,5 +1,3 @@
-repo_copy "panel/etunnel" "/usr/local/bin/etunnel" || \
-cat > /usr/local/bin/etunnel <<'PANEL'
 #!/bin/bash
 # E-TUNNEL VPN Control Panel v1.0.0 by EMMKASH TECH
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'
