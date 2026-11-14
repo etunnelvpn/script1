@@ -14,7 +14,7 @@ STUNNEL_SVC="stunnel4"; [ "$INIT_SYS" = "openrc" ] && STUNNEL_SVC="stunnel"
 svc_status() { case "$INIT_SYS" in systemd) systemctl is-active --quiet "$1" 2>/dev/null ;; openrc) rc-service "$1" status >/dev/null 2>&1 ;; esac; }
 svc_restart() { for s in "$@"; do case "$INIT_SYS" in systemd) systemctl restart "$s" 2>/dev/null ;; openrc) rc-service "$s" restart 2>/dev/null ;; esac; done; }
 pause() { read -p "  Press Enter to return..." < /dev/tty; }
-on_off() { svc_status "$1" && echo -e "${GREEN}ON/ ${NC}" || echo -e "${RED}OFF${NC}"; }
+on_off() { svc_status "$1" && echo "ON/" || echo "OFF"; }
 
 # ── auto-expire SSH accounts ──────────────────────────────────
 expire_ssh_accounts() {
@@ -152,27 +152,25 @@ echo "  |   TROJAN/WS/GRPC   > ${TROJAN_COUNT}  ACCOUNT PREMIUM         |"
 echo "  |   SHADOWSOCKS/WS   > ${UDP_COUNT}  ACCOUNT PREMIUM         |"
 echo "  +--------------------------------------------------+"
 echo ""
-SSH_S=$(svc_status dropbear && echo "ON/ " || echo "OFF ")
-NGINX_S=$(svc_status nginx   && echo "ON/ " || echo "OFF ")
-WS_S=$(svc_status rocket-proxy && echo "ON/ " || echo "OFF ")
-DROP_S=$(svc_status dropbear   && echo "ON/ " || echo "OFF ")
-XRAY_SVC=$(svc_status xray    && echo "ON/ " || echo "OFF ")
-HAP_SVC=$(svc_status  haproxy && echo "ON/ " || echo "OFF ")
-echo "+--------------------+-------------------+-------------------+"
-echo "| SSH    : ${SSH_S}      | NGINX  : ${NGINX_S}     | XRAY   : ${XRAY_SVC}    |"
-echo "| WS-ePRO: ${WS_S}      | DROPBR : ${DROP_S}     | HAPROXY: ${HAP_SVC}    |"
-echo "+--------------------+-------------------+-------------------+"
+SSH_S=$(svc_status dropbear    && echo "ON/" || echo "OFF")
+NGINX_S=$(svc_status nginx     && echo "ON/" || echo "OFF")
+WS_S=$(svc_status rocket-proxy && echo "ON/" || echo "OFF")
+DROP_S=$(svc_status dropbear   && echo "ON/" || echo "OFF")
+XRAY_SVC=$(svc_status xray    && echo "ON/" || echo "OFF")
+HAP_SVC=$(svc_status haproxy  && echo "ON/" || echo "OFF")
+echo -e "${CYAN}  +--------------------+-------------------+-------------------+"
+echo -e "  | SSH    : ${GREEN}${SSH_S}${NC}      ${CYAN}|${NC} NGINX  : ${GREEN}${NGINX_S}${NC}     ${CYAN}|${NC} XRAY   : ${GREEN}${XRAY_SVC}${NC}    ${CYAN}|${NC}"
+echo -e "  | WS-ePRO: ${GREEN}${WS_S}${NC}      ${CYAN}|${NC} DROPBR : ${GREEN}${DROP_S}${NC}     ${CYAN}|${NC} HAPROXY: ${GREEN}${HAP_SVC}${NC}    ${CYAN}|${NC}"
+echo -e "${CYAN}  +--------------------+-------------------+-------------------+${NC}"
 echo ""
-echo -e "${CYAN}  +-----------------------+----------------------+--------------------+${NC}"
-echo    "  | [01] SSH MENU         | [08] DELL ALL EXP    | [15] BCKP/RSTR     |"
-echo    "  | [02] VMESS MENU       | [09] AUTOREBOOT      | [16] REBOOT        |"
-echo    "  | [03] VLESS MENU       | [10] INFO PORT       | [17] RESTART       |"
-echo    "  | [04] TROJAN MENU      | [11] SPEEDTEST       | [18] DOMAIN        |"
-echo    "  | [05] SHADOW MENU      | [12] RUNNING         | [19] CERT SSL      |"
-echo    "  | [06] LIMIT SPEED      | [13] CLEAR LOG       | [20] INS. UDP      |"
-echo    "  | [07] VPS INFO         | [14] Cek Bandwith    | [21] CLEAR CACHE   |"
-echo    "  | [22] BOT NOTIF        | [23] UPDATE SCRIPT   |                    |"
-echo -e "${CYAN}  +-----------------------+----------------------+--------------------+${NC}"
+echo -e "${CYAN}  [01]${NC} SSH MENU         ${CYAN}[08]${NC} DELL ALL EXP    ${CYAN}[15]${NC} BCKP/RSTR"
+echo -e "${CYAN}  [02]${NC} VMESS MENU       ${CYAN}[09]${NC} AUTOREBOOT      ${CYAN}[16]${NC} REBOOT"
+echo -e "${CYAN}  [03]${NC} VLESS MENU       ${CYAN}[10]${NC} INFO PORT       ${CYAN}[17]${NC} RESTART"
+echo -e "${CYAN}  [04]${NC} TROJAN MENU      ${CYAN}[11]${NC} SPEEDTEST       ${CYAN}[18]${NC} DOMAIN"
+echo -e "${CYAN}  [05]${NC} SHADOW MENU      ${CYAN}[12]${NC} RUNNING         ${CYAN}[19]${NC} CERT SSL"
+echo -e "${CYAN}  [06]${NC} LIMIT SPEED      ${CYAN}[13]${NC} CLEAR LOG       ${CYAN}[20]${NC} INS. UDP"
+echo -e "${CYAN}  [07]${NC} VPS INFO         ${CYAN}[14]${NC} Cek Bandwith    ${CYAN}[21]${NC} CLEAR CACHE"
+echo -e "${CYAN}  [22]${NC} BOT NOTIF        ${CYAN}[23]${NC} UPDATE SCRIPT"
 echo ""
 echo -e "  ${GREEN}[25] CHANGE BANNER <<<${NC}"
 echo -e "  ${RED}[ 0] BACK TO EXIT MENU <<<${NC}"
