@@ -1822,58 +1822,52 @@ clear
 get_vps_info
 count_accs
 
-echo -e "${MAGENTA}  ┌──────────────────────────────────────────────────────────┐${NC}"
-# ── header ─────────────────────────────────────────────────────────────
-echo -e "${MAGENTA}"
-echo "  +--------------------------------------------------+"
-echo "  |     PREMIUM AUTOSCRIPT BY EMMKASH TECH           |"
-echo "  |     Contact: +254112735877                       |"
-echo "  +--------------------------------------------------+"
-echo -e "${NC}"
-echo ""
-# ── server info ──────────────────────────────────────────────────────────
-echo -e "${CYAN}  +--------------------------------------------------+"
-printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "System OS"     "$OS_NAME"
-printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "Core System"   "$CPU_CORES"
-printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "Server RAM"    "${RAM_USED}/${RAM_TOTAL} MB"
-printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "Uptime Server" "${UPTIME_MIN} minutes"
-printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "Domain"        "$DOMAIN"
-printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "IP VPS"        "$VPS_IP"
-printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "ISP"           "$ISP"
-printf "  | ${GREEN}* %-16s = %-27s${CYAN}|\n" "City"          "$CITY"
+echo -e "${MAGENTA}  +--------------------------------------------------+"
+echo -e "  |     PREMIUM AUTOSCRIPT BY EMMKASH TECH           |"
+echo -e "  |     Contact: +254112735877                       |"
 echo -e "  +--------------------------------------------------+${NC}"
 echo ""
-# ── account counts ───────────────────────────────────────────────────────
+echo -e "${CYAN}  +--------------------------------------------------+"
+echo -e "  | ${GREEN}* System OS      ${CYAN}= ${NC}$OS_NAME"
+echo -e "${CYAN}  | ${GREEN}* Core System    ${CYAN}= ${NC}$CPU_CORES"
+echo -e "${CYAN}  | ${GREEN}* Server RAM     ${CYAN}= ${NC}${RAM_USED}/${RAM_TOTAL} MB"
+echo -e "${CYAN}  | ${GREEN}* Uptime Server  ${CYAN}= ${NC}${UPTIME_MIN} minutes"
+echo -e "${CYAN}  | ${GREEN}* Domain         ${CYAN}= ${NC}$DOMAIN"
+echo -e "${CYAN}  | ${GREEN}* IP VPS         ${CYAN}= ${NC}$VPS_IP"
+echo -e "${CYAN}  | ${GREEN}* ISP            ${CYAN}= ${NC}$ISP"
+echo -e "${CYAN}  | ${GREEN}* City           ${CYAN}= ${NC}$CITY"
+echo -e "${CYAN}  +--------------------------------------------------+${NC}"
+echo ""
 echo -e "${YELLOW}             >>> YOUR ACCOUNT ON VPS <<<${NC}"
 echo -e "${CYAN}  +--------------------------------------------------+"
-printf "  |   SSH/OPENVPN      > %-4d ACCOUNT PREMIUM         |\n" "$SSH_COUNT"
-printf "  |   VMESS/WS/GRPC    > %-4d ACCOUNT PREMIUM         |\n" "$V2RAY_COUNT"
-printf "  |   VLESS/WS/GRPC    > %-4d ACCOUNT PREMIUM         |\n" "$V2RAY_COUNT"
-printf "  |   TROJAN/WS/GRPC   > %-4d ACCOUNT PREMIUM         |\n" "$TROJAN_COUNT"
-printf "  |   SHADOWSOCKS/WS   > %-4d ACCOUNT PREMIUM         |\n" "$UDP_COUNT"
-echo -e "  +--------------------------------------------------+${NC}"
+printf "${CYAN}  |${NC}   SSH/OPENVPN      > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$SSH_COUNT"
+printf "${CYAN}  |${NC}   VMESS/WS/GRPC    > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$V2RAY_COUNT"
+printf "${CYAN}  |${NC}   VLESS/WS/GRPC    > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$V2RAY_COUNT"
+printf "${CYAN}  |${NC}   TROJAN/WS/GRPC   > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$TROJAN_COUNT"
+printf "${CYAN}  |${NC}   SHADOWSOCKS/WS   > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$UDP_COUNT"
+echo -e "${CYAN}  +--------------------------------------------------+${NC}"
 echo ""
-# ── service status bar ───────────────────────────────────────────────────
-SSH_S=$(on_off dropbear); NGINX_S=$(on_off nginx)
-XRAY_SVC=$(svc_status xray && echo -e "${GREEN}*${NC}" || echo -e "${RED}*${NC}")
-WS_S=$(on_off rocket-proxy); DROP_S=$(on_off dropbear)
-HAP_SVC=$(svc_status haproxy && echo -e "${GREEN}*${NC}" || echo -e "${RED}*${NC}")
-echo -e "${CYAN}  +------------------+------------------+------------------+"
-printf "  | SSH    : %-9s | NGINX   : %-9s | XRAY   : %-8s |\n" "$SSH_S" "$NGINX_S" "$XRAY_SVC"
-printf "  | WS-ePRO: %-9s | DROPBEAR: %-9s | HAPROXY: %-8s |\n" "$WS_S" "$DROP_S" "$HAP_SVC"
-echo -e "  +------------------+------------------+------------------+${NC}"
+SSH_S=$(on_off dropbear)
+NGINX_S=$(on_off nginx)
+WS_S=$(on_off rocket-proxy)
+DROP_S=$(on_off dropbear)
+XRAY_SVC=$(svc_status xray    && echo "ON/ " || echo "OFF")
+HAP_SVC=$(svc_status  haproxy && echo "ON/ " || echo "OFF")
+echo -e "${CYAN}  +--------------------+-------------------+-------------------+${NC}"
+echo -e "${CYAN}  |${NC} SSH    : ${GREEN}${SSH_S}${NC}      ${CYAN}|${NC} NGINX  : ${GREEN}${NGINX_S}${NC}     ${CYAN}|${NC} XRAY   : ${GREEN}${XRAY_SVC}${NC}    ${CYAN}|${NC}"
+echo -e "${CYAN}  |${NC} WS-ePRO: ${GREEN}${WS_S}${NC}      ${CYAN}|${NC} DROPBR : ${GREEN}${DROP_S}${NC}     ${CYAN}|${NC} HAPROXY: ${GREEN}${HAP_SVC}${NC}    ${CYAN}|${NC}"
+echo -e "${CYAN}  +--------------------+-------------------+-------------------+${NC}"
 echo ""
-# ── main menu ────────────────────────────────────────────────────────────
-echo -e "${CYAN}  +-----------------------+----------------------+--------------------+"
-echo "  | [01] SSH MENU         | [08] DELL ALL EXP    | [15] BCKP/RSTR     |"
-echo "  | [02] VMESS MENU       | [09] AUTOREBOOT      | [16] REBOOT        |"
-echo "  | [03] VLESS MENU       | [10] INFO PORT       | [17] RESTART       |"
-echo "  | [04] TROJAN MENU      | [11] SPEEDTEST       | [18] DOMAIN        |"
-echo "  | [05] SHADOW MENU      | [12] RUNNING         | [19] CERT SSL      |"
-echo "  | [06] LIMIT SPEED      | [13] CLEAR LOG       | [20] INS. UDP      |"
-echo "  | [07] VPS INFO         | [14] Cek Bandwith    | [21] CLEAR CACHE   |"
-echo "  | [22] BOT NOTIF        | [23] UPDATE SCRIPT   |                    |"
-echo -e "  +-----------------------+----------------------+--------------------+${NC}"
+echo -e "${CYAN}  +-----------------------+----------------------+--------------------+${NC}"
+echo    "  | [01] SSH MENU         | [08] DELL ALL EXP    | [15] BCKP/RSTR     |"
+echo    "  | [02] VMESS MENU       | [09] AUTOREBOOT      | [16] REBOOT        |"
+echo    "  | [03] VLESS MENU       | [10] INFO PORT       | [17] RESTART       |"
+echo    "  | [04] TROJAN MENU      | [11] SPEEDTEST       | [18] DOMAIN        |"
+echo    "  | [05] SHADOW MENU      | [12] RUNNING         | [19] CERT SSL      |"
+echo    "  | [06] LIMIT SPEED      | [13] CLEAR LOG       | [20] INS. UDP      |"
+echo    "  | [07] VPS INFO         | [14] Cek Bandwith    | [21] CLEAR CACHE   |"
+echo    "  | [22] BOT NOTIF        | [23] UPDATE SCRIPT   |                    |"
+echo -e "${CYAN}  +-----------------------+----------------------+--------------------+${NC}"
 echo ""
 echo -e "  ${GREEN}[25] CHANGE BANNER <<<${NC}"
 echo -e "  ${RED}[ 0] BACK TO EXIT MENU <<<${NC}"
@@ -2309,10 +2303,45 @@ PYTDEL
   echo -e "  ${YELLOW}Bot notification feature — coming soon${NC}"; pause;;
 
  23)
-  echo -e "${CYAN}  Updating E-TUNNEL script...${NC}"
-  curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel-update.sh && \
-    bash /tmp/etunnel-update.sh && echo -e "  ${GREEN}Update done${NC}" || \
-    echo -e "  ${RED}Failed — check internet${NC}"; pause;;
+  clear
+  echo -e "${CYAN}  ══════════════ UPDATE SCRIPT ══════════════${NC}"
+  echo -e "  Pulling latest files from GitHub..."
+  echo ""
+  REPO="https://raw.githubusercontent.com/etunnelvpn/script1/main"
+  UPDATED=0
+  FAILED=0
+  _upd() {
+    local src="$1" dst="$2" label="$3"
+    if curl -fsSL "${REPO}/${src}" -o /tmp/_etunnel_upd 2>/dev/null; then
+      cp /tmp/_etunnel_upd "$dst"
+      chmod +x "$dst" 2>/dev/null || true
+      echo -e "  ${GREEN}Updated:${NC} $label"
+      UPDATED=$((UPDATED+1))
+    else
+      echo -e "  ${RED}Failed :${NC} $label"
+      FAILED=$((FAILED+1))
+    fi
+  }
+  _upd "panel/etunnel"                    "/usr/local/bin/menu"                       "Control Panel (menu)"
+  _upd "panel/etunnel-watchdog.sh"        "/usr/local/bin/etunnel-watchdog.sh"        "Watchdog"
+  _upd "panel/etunnel-quota-check.py"     "/usr/local/bin/etunnel-quota-check.py"     "Quota Checker"
+  _upd "panel/etunnel-switch-to-ovpn.sh"  "/usr/local/bin/etunnel-switch-to-ovpn.sh"  "Switch to OpenVPN"
+  _upd "panel/etunnel-switch-to-etunnel.sh" "/usr/local/bin/etunnel-switch-to-etunnel.sh" "Switch to E-TUNNEL"
+  _upd "components/universal-bridge/bridge.py" "/opt/universal-bridge/bridge.py"      "Universal Bridge"
+  _upd "components/rocket-proxy/rocket-proxy.js" "/opt/rocket/rocket-proxy.js"        "Rocket Proxy"
+  _upd "components/vpn-panel/app.py"      "/opt/vpn-panel/app.py"                     "VPN Panel"
+  _upd "config/haproxy.cfg"               "/etc/haproxy/haproxy.cfg"                  "HAProxy config"
+  _upd "issue.net"                        "/etc/issue.net"                            "SSH Banner"
+  cp /etc/issue.net /etc/motd 2>/dev/null || true
+  echo ""
+  echo -e "  ${GREEN}Updated: $UPDATED file(s)${NC}  ${RED}Failed: $FAILED${NC}"
+  if [ $UPDATED -gt 0 ]; then
+    echo -e "  ${CYAN}Restarting affected services...${NC}"
+    svc_restart universal-bridge rocket-proxy vpn-panel 2>/dev/null || true
+    echo -e "  ${GREEN}Done — no reinstall needed${NC}"
+  fi
+  rm -f /tmp/_etunnel_upd 2>/dev/null || true
+  pause;;
 
  25)
   clear

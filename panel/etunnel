@@ -122,54 +122,52 @@ clear
 get_vps_info
 count_accs
 
-echo -e "${MAGENTA}  ┌──────────────────────────────────────────────────────────┐${NC}"
-echo -e "${MAGENTA}  │       PREMIUM AUTOSCRIPT BY EMMKASH TECH                 │${NC}"
-echo -e "${MAGENTA}  │       Contact: +254112735877                             │${NC}"
-echo -e "${MAGENTA}  └──────────────────────────────────────────────────────────┘${NC}"
+echo -e "${MAGENTA}  +--------------------------------------------------+"
+echo -e "  |     PREMIUM AUTOSCRIPT BY EMMKASH TECH           |"
+echo -e "  |     Contact: +254112735877                       |"
+echo -e "  +--------------------------------------------------+${NC}"
 echo ""
-
-echo -e "${CYAN}  ┌──────────────────────────────────────────────────────────┐${NC}"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "System OS"     "$OS_NAME"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "Core System"   "$CPU_CORES"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "Server RAM"    "${RAM_USED}/${RAM_TOTAL} MB"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "Uptime Server" "${UPTIME_MIN} minutes"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "Domain"        "$DOMAIN"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "IP VPS"        "$VPS_IP"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "ISP"           "$ISP"
-printf "${CYAN}  │${NC}  ${GREEN}●${NC} %-18s = %-32s${CYAN}│${NC}\n" "City"          "$CITY"
-echo -e "${CYAN}  └──────────────────────────────────────────────────────────┘${NC}"
+echo -e "${CYAN}  +--------------------------------------------------+"
+echo -e "  | ${GREEN}* System OS      ${CYAN}= ${NC}$OS_NAME"
+echo -e "${CYAN}  | ${GREEN}* Core System    ${CYAN}= ${NC}$CPU_CORES"
+echo -e "${CYAN}  | ${GREEN}* Server RAM     ${CYAN}= ${NC}${RAM_USED}/${RAM_TOTAL} MB"
+echo -e "${CYAN}  | ${GREEN}* Uptime Server  ${CYAN}= ${NC}${UPTIME_MIN} minutes"
+echo -e "${CYAN}  | ${GREEN}* Domain         ${CYAN}= ${NC}$DOMAIN"
+echo -e "${CYAN}  | ${GREEN}* IP VPS         ${CYAN}= ${NC}$VPS_IP"
+echo -e "${CYAN}  | ${GREEN}* ISP            ${CYAN}= ${NC}$ISP"
+echo -e "${CYAN}  | ${GREEN}* City           ${CYAN}= ${NC}$CITY"
+echo -e "${CYAN}  +--------------------------------------------------+${NC}"
 echo ""
-
-echo -e "  ${YELLOW}          >>> YOUR ACCOUNT ON VPS <<<${NC}"
-echo -e "${CYAN}  ┌──────────────────────────────────────────────────────────┐${NC}"
-printf "${CYAN}  │${NC}    SSH/OPENVPN      ${CYAN}►${NC} %-4s ACCOUNT PREMIUM                ${CYAN}│${NC}\n" "$SSH_COUNT"
-printf "${CYAN}  │${NC}    VMESS/WS/GRPC    ${CYAN}►${NC} %-4s ACCOUNT PREMIUM                ${CYAN}│${NC}\n" "$V2RAY_COUNT"
-printf "${CYAN}  │${NC}    VLESS/WS/GRPC    ${CYAN}►${NC} %-4s ACCOUNT PREMIUM                ${CYAN}│${NC}\n" "$V2RAY_COUNT"
-printf "${CYAN}  │${NC}    TROJAN/WS/GRPC   ${CYAN}►${NC} %-4s ACCOUNT PREMIUM                ${CYAN}│${NC}\n" "$TROJAN_COUNT"
-printf "${CYAN}  │${NC}    SHADOWSOCKS/WS   ${CYAN}►${NC} %-4s ACCOUNT PREMIUM                ${CYAN}│${NC}\n" "$UDP_COUNT"
-echo -e "${CYAN}  └──────────────────────────────────────────────────────────┘${NC}"
+echo -e "${YELLOW}             >>> YOUR ACCOUNT ON VPS <<<${NC}"
+echo -e "${CYAN}  +--------------------------------------------------+"
+printf "${CYAN}  |${NC}   SSH/OPENVPN      > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$SSH_COUNT"
+printf "${CYAN}  |${NC}   VMESS/WS/GRPC    > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$V2RAY_COUNT"
+printf "${CYAN}  |${NC}   VLESS/WS/GRPC    > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$V2RAY_COUNT"
+printf "${CYAN}  |${NC}   TROJAN/WS/GRPC   > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$TROJAN_COUNT"
+printf "${CYAN}  |${NC}   SHADOWSOCKS/WS   > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$UDP_COUNT"
+echo -e "${CYAN}  +--------------------------------------------------+${NC}"
 echo ""
-
-SSH_S=$(on_off dropbear); NGINX_S=$(on_off nginx)
-XRAY_S=$(svc_status xray && echo -e "${GREEN}●${NC}" || echo -e "${RED}●${NC}")
-WS_S=$(on_off rocket-proxy); DROP_S=$(on_off dropbear)
-HAP_S=$(svc_status haproxy && echo -e "${GREEN}●${NC}" || echo -e "${RED}●${NC}")
-echo -e "${CYAN}  ┌──────────────────────┬──────────────────────┬────────────────────┐${NC}"
-printf "${CYAN}  │${NC} SSH    : %-13b${CYAN}│${NC} NGINX   : %-13b${CYAN}│${NC} XRAY  : %-11b${CYAN}│${NC}\n" "$SSH_S" "$NGINX_S" "$XRAY_S"
-printf "${CYAN}  │${NC} WS-ePRO: %-13b${CYAN}│${NC} DROPBEAR: %-13b${CYAN}│${NC} HAPROXY: %-10b${CYAN}│${NC}\n" "$WS_S" "$DROP_S" "$HAP_S"
-echo -e "${CYAN}  └──────────────────────┴──────────────────────┴────────────────────┘${NC}"
+SSH_S=$(on_off dropbear)
+NGINX_S=$(on_off nginx)
+WS_S=$(on_off rocket-proxy)
+DROP_S=$(on_off dropbear)
+XRAY_SVC=$(svc_status xray    && echo "ON/ " || echo "OFF")
+HAP_SVC=$(svc_status  haproxy && echo "ON/ " || echo "OFF")
+echo -e "${CYAN}  +--------------------+-------------------+-------------------+${NC}"
+echo -e "${CYAN}  |${NC} SSH    : ${GREEN}${SSH_S}${NC}      ${CYAN}|${NC} NGINX  : ${GREEN}${NGINX_S}${NC}     ${CYAN}|${NC} XRAY   : ${GREEN}${XRAY_SVC}${NC}    ${CYAN}|${NC}"
+echo -e "${CYAN}  |${NC} WS-ePRO: ${GREEN}${WS_S}${NC}      ${CYAN}|${NC} DROPBR : ${GREEN}${DROP_S}${NC}     ${CYAN}|${NC} HAPROXY: ${GREEN}${HAP_SVC}${NC}    ${CYAN}|${NC}"
+echo -e "${CYAN}  +--------------------+-------------------+-------------------+${NC}"
 echo ""
-
-echo -e "${CYAN}  ┌──────────────────────────┬────────────────────────────┬──────────────────────┐${NC}"
-printf "${CYAN}  │${NC} ${YELLOW}[01]${NC} %-21s${CYAN}│${NC} ${YELLOW}[08]${NC} %-23s${CYAN}│${NC} ${YELLOW}[15]${NC} %-18s${CYAN}│${NC}\n" "SSH MENU"       "DELL ALL EXP"   "BCKP/RSTR"
-printf "${CYAN}  │${NC} ${YELLOW}[02]${NC} %-21s${CYAN}│${NC} ${YELLOW}[09]${NC} %-23s${CYAN}│${NC} ${YELLOW}[16]${NC} %-18s${CYAN}│${NC}\n" "VMESS MENU"     "AUTOREBOOT"     "REBOOT"
-printf "${CYAN}  │${NC} ${YELLOW}[03]${NC} %-21s${CYAN}│${NC} ${YELLOW}[10]${NC} %-23s${CYAN}│${NC} ${YELLOW}[17]${NC} %-18s${CYAN}│${NC}\n" "VLESS MENU"     "INFO PORT"      "RESTART"
-printf "${CYAN}  │${NC} ${YELLOW}[04]${NC} %-21s${CYAN}│${NC} ${YELLOW}[11]${NC} %-23s${CYAN}│${NC} ${YELLOW}[18]${NC} %-18s${CYAN}│${NC}\n" "TROJAN MENU"    "SPEEDTEST"      "DOMAIN"
-printf "${CYAN}  │${NC} ${YELLOW}[05]${NC} %-21s${CYAN}│${NC} ${YELLOW}[12]${NC} %-23s${CYAN}│${NC} ${YELLOW}[19]${NC} %-18s${CYAN}│${NC}\n" "SHADOW MENU"    "RUNNING"        "CERT SSL"
-printf "${CYAN}  │${NC} ${YELLOW}[06]${NC} %-21s${CYAN}│${NC} ${YELLOW}[13]${NC} %-23s${CYAN}│${NC} ${YELLOW}[20]${NC} %-18s${CYAN}│${NC}\n" "LIMIT SPEED"    "CLEAR LOG"      "INS. UDP"
-printf "${CYAN}  │${NC} ${YELLOW}[07]${NC} %-21s${CYAN}│${NC} ${YELLOW}[14]${NC} %-23s${CYAN}│${NC} ${YELLOW}[21]${NC} %-18s${CYAN}│${NC}\n" "VPS INFO"       "Cek Bandwith"   "CLEAR CACHE"
-printf "${CYAN}  │${NC} ${YELLOW}[22]${NC} %-21s${CYAN}│${NC} ${YELLOW}[23]${NC} %-23s${CYAN}│${NC}                      ${CYAN}│${NC}\n" "BOT NOTIF"      "UPDATE SCRIPT"
-echo -e "${CYAN}  └──────────────────────────┴────────────────────────────┴──────────────────────┘${NC}"
+echo -e "${CYAN}  +-----------------------+----------------------+--------------------+${NC}"
+echo    "  | [01] SSH MENU         | [08] DELL ALL EXP    | [15] BCKP/RSTR     |"
+echo    "  | [02] VMESS MENU       | [09] AUTOREBOOT      | [16] REBOOT        |"
+echo    "  | [03] VLESS MENU       | [10] INFO PORT       | [17] RESTART       |"
+echo    "  | [04] TROJAN MENU      | [11] SPEEDTEST       | [18] DOMAIN        |"
+echo    "  | [05] SHADOW MENU      | [12] RUNNING         | [19] CERT SSL      |"
+echo    "  | [06] LIMIT SPEED      | [13] CLEAR LOG       | [20] INS. UDP      |"
+echo    "  | [07] VPS INFO         | [14] Cek Bandwith    | [21] CLEAR CACHE   |"
+echo    "  | [22] BOT NOTIF        | [23] UPDATE SCRIPT   |                    |"
+echo -e "${CYAN}  +-----------------------+----------------------+--------------------+${NC}"
 echo ""
 echo -e "  ${GREEN}[25] CHANGE BANNER <<<${NC}"
 echo -e "  ${RED}[ 0] BACK TO EXIT MENU <<<${NC}"
@@ -525,7 +523,7 @@ PYTDEL
  12)
   clear
   echo -e "${CYAN}  ══════════════ SERVICE STATUS ══════════════${NC}"
-  for svc in haproxy "$STUNNEL_SVC" dropbear nginx xray rocket-proxy dnsmasq udp-custom vpn-panel openvpn@server openvpn-stunnel universal-bridge; do
+  for svc in haproxy "$STUNNEL_SVC" dropbear nginx xray rocket-proxy dnsmasq udp-custom vpn-panel openvpn@server universal-bridge; do
     svc_status "$svc" && echo -e "  ${GREEN}●${NC} $svc [RUNNING]" || echo -e "  ${RED}●${NC} $svc [STOPPED]"
   done; pause;;
 
@@ -548,7 +546,7 @@ PYTDEL
   case $BRC in
    1)
     BKFILE="/root/etunnel-backup-$(date +%Y%m%d-%H%M%S).tar.gz"
-    tar czf "$BKFILE" /etc/etunnel /usr/local/bin/etunnel /usr/local/etc/xray/config.json 2>/dev/null
+    tar czf "$BKFILE" /etc/etunnel /usr/local/bin/menu /usr/local/etc/xray/config.json 2>/dev/null
     echo -e "  ${GREEN}Backup: $BKFILE${NC}";;
    2)
     ls /root/etunnel-backup-*.tar.gz 2>/dev/null || { echo -e "  ${YELLOW}No backups${NC}"; pause; continue; }
@@ -605,10 +603,45 @@ PYTDEL
   echo -e "  ${YELLOW}Bot notification feature — coming soon${NC}"; pause;;
 
  23)
-  echo -e "${CYAN}  Updating E-TUNNEL script...${NC}"
-  curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel-update.sh && \
-    bash /tmp/etunnel-update.sh && echo -e "  ${GREEN}Update done${NC}" || \
-    echo -e "  ${RED}Failed — check internet${NC}"; pause;;
+  clear
+  echo -e "${CYAN}  ══════════════ UPDATE SCRIPT ══════════════${NC}"
+  echo -e "  Pulling latest files from GitHub..."
+  echo ""
+  REPO="https://raw.githubusercontent.com/etunnelvpn/script1/main"
+  UPDATED=0
+  FAILED=0
+  _upd() {
+    local src="$1" dst="$2" label="$3"
+    if curl -fsSL "${REPO}/${src}" -o /tmp/_etunnel_upd 2>/dev/null; then
+      cp /tmp/_etunnel_upd "$dst"
+      chmod +x "$dst" 2>/dev/null || true
+      echo -e "  ${GREEN}Updated:${NC} $label"
+      UPDATED=$((UPDATED+1))
+    else
+      echo -e "  ${RED}Failed :${NC} $label"
+      FAILED=$((FAILED+1))
+    fi
+  }
+  _upd "panel/etunnel"                    "/usr/local/bin/menu"                       "Control Panel (menu)"
+  _upd "panel/etunnel-watchdog.sh"        "/usr/local/bin/etunnel-watchdog.sh"        "Watchdog"
+  _upd "panel/etunnel-quota-check.py"     "/usr/local/bin/etunnel-quota-check.py"     "Quota Checker"
+  _upd "panel/etunnel-switch-to-ovpn.sh"  "/usr/local/bin/etunnel-switch-to-ovpn.sh"  "Switch to OpenVPN"
+  _upd "panel/etunnel-switch-to-etunnel.sh" "/usr/local/bin/etunnel-switch-to-etunnel.sh" "Switch to E-TUNNEL"
+  _upd "components/universal-bridge/bridge.py" "/opt/universal-bridge/bridge.py"      "Universal Bridge"
+  _upd "components/rocket-proxy/rocket-proxy.js" "/opt/rocket/rocket-proxy.js"        "Rocket Proxy"
+  _upd "components/vpn-panel/app.py"      "/opt/vpn-panel/app.py"                     "VPN Panel"
+  _upd "config/haproxy.cfg"               "/etc/haproxy/haproxy.cfg"                  "HAProxy config"
+  _upd "issue.net"                        "/etc/issue.net"                            "SSH Banner"
+  cp /etc/issue.net /etc/motd 2>/dev/null || true
+  echo ""
+  echo -e "  ${GREEN}Updated: $UPDATED file(s)${NC}  ${RED}Failed: $FAILED${NC}"
+  if [ $UPDATED -gt 0 ]; then
+    echo -e "  ${CYAN}Restarting affected services...${NC}"
+    svc_restart universal-bridge rocket-proxy vpn-panel 2>/dev/null || true
+    echo -e "  ${GREEN}Done — no reinstall needed${NC}"
+  fi
+  rm -f /tmp/_etunnel_upd 2>/dev/null || true
+  pause;;
 
  25)
   clear
