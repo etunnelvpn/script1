@@ -660,16 +660,24 @@ PWQEOF
 
 fix_cert_permissions() {
     local DOMAIN="$1"
-    chmod 755 /etc/letsencrypt 2>/dev/null
-    chmod 755 /etc/letsencrypt/live 2>/dev/null
-    chmod 755 /etc/letsencrypt/archive 2>/dev/null
-    chmod 755 /etc/letsencrypt/live/$DOMAIN 2>/dev/null
-    chmod 755 /etc/letsencrypt/archive/$DOMAIN 2>/dev/null
-    chmod 644 /etc/letsencrypt/archive/$DOMAIN/*.pem 2>/dev/null
-    chmod 644 /etc/letsencrypt/live/$DOMAIN/*.pem 2>/dev/null
+    # Certbot sometimes saves as domain-0001, domain-0002 etc — find the real path
+    local CERT_DIR=""
+    for d in "/etc/letsencrypt/live/${DOMAIN}" "/etc/letsencrypt/live/${DOMAIN}-0001" \
+              "/etc/letsencrypt/live/${DOMAIN}-0002" "/etc/letsencrypt/live/${DOMAIN}-0003"; do
+        if [ -f "${d}/fullchain.pem" ]; then CERT_DIR="$d"; break; fi
+    done
+    # fallback: find any dir containing a valid cert for this domain
+    if [ -z "$CERT_DIR" ]; then
+        CERT_DIR=$(find /etc/letsencrypt/live -name "fullchain.pem" 2>/dev/null | \
+            xargs -I{} dirname {} 2>/dev/null | head -1)
+    fi
+    [ -z "$CERT_DIR" ] && return 1
+    chmod 755 /etc/letsencrypt /etc/letsencrypt/live /etc/letsencrypt/archive 2>/dev/null
+    chmod 755 "${CERT_DIR}" 2>/dev/null
+    chmod 644 "${CERT_DIR}"/*.pem 2>/dev/null
     mkdir -p /etc/etunnel/certs
-    cp -L /etc/letsencrypt/live/$DOMAIN/fullchain.pem /etc/etunnel/certs/fullchain.pem 2>/dev/null
-    cp -L /etc/letsencrypt/live/$DOMAIN/privkey.pem /etc/etunnel/certs/privkey.pem 2>/dev/null
+    cp -L "${CERT_DIR}/fullchain.pem" /etc/etunnel/certs/fullchain.pem
+    cp -L "${CERT_DIR}/privkey.pem"   /etc/etunnel/certs/privkey.pem
     chmod 755 /etc/etunnel /etc/etunnel/certs
     chmod 644 /etc/etunnel/certs/*.pem 2>/dev/null
 }
@@ -1120,23 +1128,55 @@ check_ok "Services stopped"
 echo ""
 
 echo -e "${YELLOW} [3/23] SSL Certificate ${NC}"
-mkdir -p /etc/letsencrypt/live/${DOMAIN}
+mkdir -p /etc/letsencrypt/live/${DOMAIN} /etc/etunnel/certs
 SSL_MODE="self-signed"
-if [ -f "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" ] && \
-   openssl x509 -in "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" -noout -issuer 2>/dev/null | grep -qi "Let's Encrypt"; then
-    SSL_MODE="lets-encrypt"; check_ok "Let's Encrypt certificate exists"
+# Check for existing Let's Encrypt cert — certbot may have saved as domain-0001, -0002, etc.
+_EXISTING_CERT_DIR=""
+for _d in "/etc/letsencrypt/live/${DOMAIN}" \
+           "/etc/letsencrypt/live/${DOMAIN}-0001" \
+           "/etc/letsencrypt/live/${DOMAIN}-0002" \
+           "/etc/letsencrypt/live/${DOMAIN}-0003"; do
+    if [ -f "${_d}/fullchain.pem" ] && \
+       openssl x509 -in "${_d}/fullchain.pem" -noout -issuer 2>/dev/null | grep -qi "Let's Encrypt"; then
+        _EXISTING_CERT_DIR="$_d"; break
+    fi
+done
+if [ -n "$_EXISTING_CERT_DIR" ]; then
+    SSL_MODE="lets-encrypt"
+    cp -L "${_EXISTING_CERT_DIR}/fullchain.pem" /etc/etunnel/certs/fullchain.pem
+    cp -L "${_EXISTING_CERT_DIR}/privkey.pem"   /etc/etunnel/certs/privkey.pem
+    check_ok "Let's Encrypt certificate exists"
 else
     if try_letsencrypt "$DOMAIN"; then
-        SSL_MODE="lets-encrypt"; check_ok "New Let's Encrypt certificate"
+        SSL_MODE="lets-encrypt"
+        # Locate the directory certbot actually wrote to (may have -0001 suffix)
+        _NEW_CERT_DIR=""
+        for _d in "/etc/letsencrypt/live/${DOMAIN}" \
+                   "/etc/letsencrypt/live/${DOMAIN}-0001" \
+                   "/etc/letsencrypt/live/${DOMAIN}-0002" \
+                   "/etc/letsencrypt/live/${DOMAIN}-0003"; do
+            if [ -f "${_d}/fullchain.pem" ]; then _NEW_CERT_DIR="$_d"; break; fi
+        done
+        # Fallback: search all live dirs
+        if [ -z "$_NEW_CERT_DIR" ]; then
+            _NEW_CERT_DIR=$(find /etc/letsencrypt/live -name "fullchain.pem" 2>/dev/null | \
+                xargs -I{} dirname {} 2>/dev/null | head -1)
+        fi
+        if [ -n "$_NEW_CERT_DIR" ]; then
+            cp -L "${_NEW_CERT_DIR}/fullchain.pem" /etc/etunnel/certs/fullchain.pem
+            cp -L "${_NEW_CERT_DIR}/privkey.pem"   /etc/etunnel/certs/privkey.pem
+        fi
+        check_ok "New Let's Encrypt certificate"
     else
         openssl req -x509 -nodes -days 3650 -newkey rsa:2048 \
-            -keyout "/etc/letsencrypt/live/${DOMAIN}/privkey.pem" \
-            -out "/etc/letsencrypt/live/${DOMAIN}/fullchain.pem" \
+            -keyout "/etc/etunnel/certs/privkey.pem" \
+            -out "/etc/etunnel/certs/fullchain.pem" \
             -subj "/CN=${DOMAIN}" 2>/dev/null
         SSL_MODE="self-signed"; warn "Used self-signed certificate"
     fi
 fi
-fix_cert_permissions "$DOMAIN"
+chmod 755 /etc/etunnel /etc/etunnel/certs
+chmod 644 /etc/etunnel/certs/*.pem 2>/dev/null
 check_ok "Certificate permissions fixed"
 echo "$SSL_MODE" > /etc/etunnel/ssl-mode
 echo ""
@@ -1163,8 +1203,8 @@ echo ""
 
 echo -e "${YELLOW} [5/23] Stunnel ${NC}"
 mkdir -p /etc/haproxy /etc/stunnel
-cat /etc/letsencrypt/live/${DOMAIN}/fullchain.pem \
-    /etc/letsencrypt/live/${DOMAIN}/privkey.pem > /etc/haproxy/ssl.pem
+cat /etc/etunnel/certs/fullchain.pem \
+    /etc/etunnel/certs/privkey.pem > /etc/haproxy/ssl.pem
 chmod 600 /etc/haproxy/ssl.pem
 backup_file /etc/stunnel/stunnel.conf
 cat > /etc/stunnel/stunnel.conf <<EOF
@@ -1242,7 +1282,6 @@ echo -e "${YELLOW} [7/23] Nginx ${NC}"
 clean_nginx_conf
 rm -f /etc/nginx/sites-enabled/default
 mkdir -p /etc/nginx/stream-enabled
-cat > /etc/nginx/stream-enabled/ssl-router.conf << 'EOF'
 repo_copy "config/nginx-ssl-router.conf" "/etc/nginx/stream-enabled/ssl-router.conf" || \
 cat > /etc/nginx/stream-enabled/ssl-router.conf << 'EOF'
 stream {
@@ -1273,8 +1312,8 @@ cat > /etc/nginx/sites-enabled/xray-proxy <<EOF
 server {
     listen 4443 ssl http2 default_server reuseport;
     server_name _;
-    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_certificate /etc/etunnel/certs/fullchain.pem;
+    ssl_certificate_key /etc/etunnel/certs/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     location /vmess {
         proxy_pass http://127.0.0.1:10086;
