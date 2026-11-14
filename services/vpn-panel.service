@@ -1,0 +1,17 @@
+[Unit]
+Description=E-TUNNEL OpenVPN Web Panel
+After=network.target openvpn@server.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/vpn-panel
+Environment="PUB_IP="
+Environment="CUSTOM_DOMAIN="
+Environment="PANEL_USER=etunneladmin"
+Environment="PANEL_PASS="
+ExecStart=/usr/bin/python3 /opt/vpn-panel/app.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,20 @@
+[Unit]
+Description=E-TUNNEL Network Recovery — restart services after network comes up
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c '\
+  MODE=$(cat /etc/etunnel/current-mode 2>/dev/null || echo etunnel); \
+  if [ "$MODE" = "etunnel" ]; then \
+    systemctl is-active --quiet haproxy || \
+      systemctl restart haproxy nginx xray dropbear stunnel4 payload-proxy rocket-proxy dnsmasq universal-bridge; \
+  else \
+    systemctl is-active --quiet openvpn@server || \
+      systemctl restart openvpn@server openvpn-stunnel vpn-panel universal-bridge haproxy; \
+  fi'
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

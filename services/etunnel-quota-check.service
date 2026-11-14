@@ -1,0 +1,7 @@
+[Unit]
+Description=E-TUNNEL VPN Quota & Expiry Checker
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/bin/etunnel-quota-check.py

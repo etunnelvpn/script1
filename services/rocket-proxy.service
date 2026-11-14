@@ -1,0 +1,14 @@
+[Unit]
+Description=E-TUNNEL Rocket Proxy (WS → SSH on :8081)
+After=network.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/node /opt/rocket/rocket-proxy.js
+Restart=always
+RestartSec=3
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

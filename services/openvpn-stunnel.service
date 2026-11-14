@@ -1,0 +1,13 @@
+[Unit]
+Description=E-TUNNEL Stunnel for OpenVPN (port 443)
+After=network.target openvpn@server.service
+
+[Service]
+Type=forking
+PIDFile=/var/run/stunnel-openvpn.pid
+ExecStart=/usr/bin/stunnel4 /etc/stunnel/openvpn.conf
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

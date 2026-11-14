@@ -1,0 +1,14 @@
+[Unit]
+Description=E-TUNNEL Universal Bridge (SSH + OpenVPN + WS on :8080)
+After=network.target ssh.service
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/python3 /opt/universal-bridge/bridge.py
+Restart=always
+RestartSec=3
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

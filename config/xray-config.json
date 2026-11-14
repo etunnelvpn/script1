@@ -1,0 +1,89 @@
+{
+  "log": { "loglevel": "warning" },
+  "api": {
+    "tag": "api",
+    "services": ["HandlerService", "StatsService"]
+  },
+  "stats": {},
+  "dns": { "servers": ["8.8.8.8", "1.1.1.1"] },
+  "policy": {
+    "levels": {
+      "0": {
+        "handshake": 3,
+        "connIdle": 300,
+        "uplinkOnly": 0,
+        "downlinkOnly": 0
+      }
+    },
+    "system": {
+      "statsInboundUplink": true,
+      "statsInboundDownlink": true
+    }
+  },
+  "routing": {
+    "rules": [
+      { "type": "field", "inboundTag": ["api"], "outboundTag": "api" }
+    ]
+  },
+  "inbounds": [
+    {
+      "tag": "api",
+      "listen": "127.0.0.1",
+      "port": 10085,
+      "protocol": "dokodemo-door",
+      "settings": { "address": "127.0.0.1" }
+    },
+    {
+      "tag": "vmess-ws-443",
+      "port": 10086,
+      "listen": "127.0.0.1",
+      "protocol": "vmess",
+      "settings": {
+        "clients": [{ "id": "REPLACE_UUID", "alterId": 0, "level": 0, "email": "admin-default" }]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": { "path": "/vmess" },
+        "sockopt": { "tcpNoDelay": true }
+      }
+    },
+    {
+      "tag": "vless-ws-443",
+      "port": 10087,
+      "listen": "127.0.0.1",
+      "protocol": "vless",
+      "settings": {
+        "clients": [{ "id": "REPLACE_UUID", "level": 0, "email": "admin-default" }],
+        "decryption": "none"
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": { "path": "/vless" },
+        "sockopt": { "tcpNoDelay": true }
+      }
+    },
+    {
+      "tag": "trojan-ws-443",
+      "port": 10090,
+      "listen": "127.0.0.1",
+      "protocol": "trojan",
+      "settings": {
+        "clients": [{ "password": "REPLACE_TROJAN_PW", "email": "admin-trojan" }]
+      },
+      "streamSettings": {
+        "network": "ws",
+        "wsSettings": { "path": "/trojan" },
+        "sockopt": { "tcpNoDelay": true }
+      }
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "freedom",
+      "tag": "direct",
+      "streamSettings": { "sockopt": { "tcpNoDelay": true } }
+    },
+    { "protocol": "blackhole", "tag": "block" },
+    { "protocol": "freedom",   "tag": "api" }
+  ]
+}

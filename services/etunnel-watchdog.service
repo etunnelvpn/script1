@@ -1,0 +1,7 @@
+[Unit]
+Description=E-TUNNEL VPN Watchdog
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/etunnel-watchdog.sh
