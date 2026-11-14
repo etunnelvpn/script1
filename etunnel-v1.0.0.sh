@@ -1780,10 +1780,15 @@ get_vps_info() {
 
 # ── account counts ────────────────────────────────────────────
 count_accs() {
-    SSH_COUNT=$(grep -c '.' "$ACC_DIR/ssh.txt" 2>/dev/null || echo 0)
-    V2RAY_COUNT=$(grep -c '.' "$ACC_DIR/v2ray.txt" 2>/dev/null || echo 0)
-    TROJAN_COUNT=$(grep -c '.' "$ACC_DIR/trojan.txt" 2>/dev/null || echo 0)
-    UDP_COUNT=$(grep -c '.' "$ACC_DIR/udp.txt" 2>/dev/null || echo 0)
+    _count_file() {
+        local f="$1"
+        if [ ! -f "$f" ] || [ ! -s "$f" ]; then echo 0; return; fi
+        grep -c "[a-zA-Z0-9]" "$f" 2>/dev/null || echo 0
+    }
+    SSH_COUNT=$(_count_file "$ACC_DIR/ssh.txt")
+    V2RAY_COUNT=$(_count_file "$ACC_DIR/v2ray.txt")
+    TROJAN_COUNT=$(_count_file "$ACC_DIR/trojan.txt")
+    UDP_COUNT=$(_count_file "$ACC_DIR/udp.txt")
 }
 
 links() {
@@ -1839,24 +1844,24 @@ echo -e "${CYAN}  | ${GREEN}* City           ${CYAN}= ${NC}$CITY"
 echo -e "${CYAN}  +--------------------------------------------------+${NC}"
 echo ""
 echo -e "${YELLOW}             >>> YOUR ACCOUNT ON VPS <<<${NC}"
-echo -e "${CYAN}  +--------------------------------------------------+"
-printf "${CYAN}  |${NC}   SSH/OPENVPN      > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$SSH_COUNT"
-printf "${CYAN}  |${NC}   VMESS/WS/GRPC    > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$V2RAY_COUNT"
-printf "${CYAN}  |${NC}   VLESS/WS/GRPC    > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$V2RAY_COUNT"
-printf "${CYAN}  |${NC}   TROJAN/WS/GRPC   > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$TROJAN_COUNT"
-printf "${CYAN}  |${NC}   SHADOWSOCKS/WS   > %-3s ACCOUNT PREMIUM         ${CYAN}|\n${NC}" "$UDP_COUNT"
-echo -e "${CYAN}  +--------------------------------------------------+${NC}"
+echo "  +--------------------------------------------------+"
+echo "  |   SSH/OPENVPN      > ${SSH_COUNT}  ACCOUNT PREMIUM         |"
+echo "  |   VMESS/WS/GRPC    > ${V2RAY_COUNT}  ACCOUNT PREMIUM         |"
+echo "  |   VLESS/WS/GRPC    > ${V2RAY_COUNT}  ACCOUNT PREMIUM         |"
+echo "  |   TROJAN/WS/GRPC   > ${TROJAN_COUNT}  ACCOUNT PREMIUM         |"
+echo "  |   SHADOWSOCKS/WS   > ${UDP_COUNT}  ACCOUNT PREMIUM         |"
+echo "  +--------------------------------------------------+"
 echo ""
-SSH_S=$(on_off dropbear)
-NGINX_S=$(on_off nginx)
-WS_S=$(on_off rocket-proxy)
-DROP_S=$(on_off dropbear)
-XRAY_SVC=$(svc_status xray    && echo "ON/ " || echo "OFF")
-HAP_SVC=$(svc_status  haproxy && echo "ON/ " || echo "OFF")
-echo -e "${CYAN}  +--------------------+-------------------+-------------------+${NC}"
-echo -e "${CYAN}  |${NC} SSH    : ${GREEN}${SSH_S}${NC}      ${CYAN}|${NC} NGINX  : ${GREEN}${NGINX_S}${NC}     ${CYAN}|${NC} XRAY   : ${GREEN}${XRAY_SVC}${NC}    ${CYAN}|${NC}"
-echo -e "${CYAN}  |${NC} WS-ePRO: ${GREEN}${WS_S}${NC}      ${CYAN}|${NC} DROPBR : ${GREEN}${DROP_S}${NC}     ${CYAN}|${NC} HAPROXY: ${GREEN}${HAP_SVC}${NC}    ${CYAN}|${NC}"
-echo -e "${CYAN}  +--------------------+-------------------+-------------------+${NC}"
+SSH_S=$(svc_status dropbear && echo "ON/ " || echo "OFF ")
+NGINX_S=$(svc_status nginx   && echo "ON/ " || echo "OFF ")
+WS_S=$(svc_status rocket-proxy && echo "ON/ " || echo "OFF ")
+DROP_S=$(svc_status dropbear   && echo "ON/ " || echo "OFF ")
+XRAY_SVC=$(svc_status xray    && echo "ON/ " || echo "OFF ")
+HAP_SVC=$(svc_status  haproxy && echo "ON/ " || echo "OFF ")
+echo "+--------------------+-------------------+-------------------+"
+echo "| SSH    : ${SSH_S}      | NGINX  : ${NGINX_S}     | XRAY   : ${XRAY_SVC}    |"
+echo "| WS-ePRO: ${WS_S}      | DROPBR : ${DROP_S}     | HAPROXY: ${HAP_SVC}    |"
+echo "+--------------------+-------------------+-------------------+"
 echo ""
 echo -e "${CYAN}  +-----------------------+----------------------+--------------------+${NC}"
 echo    "  | [01] SSH MENU         | [08] DELL ALL EXP    | [15] BCKP/RSTR     |"
