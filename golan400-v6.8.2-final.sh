@@ -3,6 +3,35 @@
 #  GOLAN400 v6.8.2 MULTI-DISTRO (FINAL CLEAN)
 #  All 9 fixes + 6 runtime fixes + Nginx stream + OpenVPN formats
 # 
+
+# ---------------------------------------------------------------
+#  BASH CHECK — install bash if missing then re-exec this script
+# ---------------------------------------------------------------
+if [ -z "${BASH_VERSION:-}" ]; then
+    echo "[!] bash not found — attempting to install..."
+    if command -v apt-get >/dev/null 2>&1; then
+        apt-get update -qq && apt-get install -y -qq bash
+    elif command -v apk >/dev/null 2>&1; then
+        apk add --no-cache bash
+    elif command -v dnf >/dev/null 2>&1; then
+        dnf install -y -q bash
+    elif command -v yum >/dev/null 2>&1; then
+        yum install -y -q bash
+    elif command -v pacman >/dev/null 2>&1; then
+        pacman -S --noconfirm bash
+    else
+        echo "[!] Cannot install bash — no known package manager found"
+        exit 1
+    fi
+    if command -v bash >/dev/null 2>&1; then
+        echo "[+] bash installed — restarting script..."
+        exec bash "$0" "$@"
+    else
+        echo "[!] bash install failed — cannot continue"
+        exit 1
+    fi
+fi
+
 set -uo pipefail
 
 export GOLAN_AUTO_PANEL=1
