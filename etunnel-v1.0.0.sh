@@ -1197,6 +1197,17 @@ NO_START=0
 DROPBEAR_PORT=444
 DROPBEAR_EXTRA_ARGS="-w -p 444"
 EOF
+    # Ubuntu 22.04 uses systemd for dropbear — /etc/default is ignored
+    # Create a systemd override to set the correct port
+    if [ "$INIT_SYS" = "systemd" ]; then
+        mkdir -p /etc/systemd/system/dropbear.service.d
+        cat > /etc/systemd/system/dropbear.service.d/override.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=/usr/sbin/dropbear -F -w -p 444 -b /etc/issue.net
+EOF
+        systemctl daemon-reload 2>/dev/null || true
+    fi
 fi
 check_ok "Dropbear config"
 echo ""
@@ -1623,7 +1634,6 @@ mkdir -p /etc/etunnel/accounts /root/etunnel-save
 touch /etc/etunnel/custom_ports.txt
 touch /etc/etunnel/accounts/{v2ray,trojan,ssh,udp}.txt
 
-cat > /usr/local/bin/etunnel <<'PANEL'
 repo_copy "panel/etunnel" "/usr/local/bin/etunnel" || \
 cat > /usr/local/bin/etunnel <<'PANEL'
 #!/bin/bash
@@ -2348,7 +2358,6 @@ fi
 echo ""
 
 echo -e "${YELLOW} [18/23] Watchdog ${NC}"
-cat > /usr/local/bin/etunnel-watchdog.sh <<'WDPY'
 repo_copy "panel/etunnel-watchdog.sh" "/usr/local/bin/etunnel-watchdog.sh" || \
 cat > /usr/local/bin/etunnel-watchdog.sh <<'WDPY'
 #!/bin/bash
@@ -2392,7 +2401,6 @@ check_ok "Watchdog enabled"
 echo ""
 
 echo -e "${YELLOW} [18b/23] Quota Checker ${NC}"
-cat > /usr/local/bin/etunnel-quota-check.py <<'PYCHECK'
 repo_copy "panel/etunnel-quota-check.py" "/usr/local/bin/etunnel-quota-check.py" || \
 cat > /usr/local/bin/etunnel-quota-check.py <<'PYCHECK'
 #!/usr/bin/env python3
