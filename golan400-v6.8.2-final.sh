@@ -53,6 +53,164 @@ LOG_FILE="/root/golan400-install.log"
 > "$LOG_FILE"
 
 # 
+#  GOLAN400 CLEANUP — remove old installation before fresh install
+# 
+golan_cleanup() {
+    echo -e "${CYAN}[Clean] Removing old GOLAN400 installation...${NC}"
+    log "=== CLEANUP START ==="
+
+    # detect init system for service commands
+    local _INIT="unknown"
+    [ -d /run/systemd/system ] && command -v systemctl >/dev/null 2>&1 && _INIT="systemd"
+    command -v rc-service >/dev/null 2>&1 && _INIT="openrc"
+
+    # 1. Stop all GOLAN services
+    local _SERVICES="golan-watchdog golan-watchdog.timer golan-quota-check golan-quota-check.timer \
+        golan-net-recovery certbot-renew-golan certbot-renew-golan.timer \
+        universal-bridge rocket-proxy udp-custom vpn-panel openvpn-stunnel \
+        payload-proxy ovpn-ws-bridge xray"
+    for s in $_SERVICES; do
+        case "$_INIT" in
+            systemd) systemctl stop "$s" 2>/dev/null; systemctl disable "$s" 2>/dev/null ;;
+            openrc) rc-service "$s" stop 2>/dev/null; rc-update del "$s" default 2>/dev/null ;;
+        esac
+    done
+
+    # also stop standard services that GOLAN manages
+    for s in haproxy nginx stunnel4 stunnel dropbear dnsmasq openvpn@server openvpn fail2ban; do
+        case "$_INIT" in
+            systemd) systemctl stop "$s" 2>/dev/null ;;
+            openrc) rc-service "$s" stop 2>/dev/null ;;
+        esac
+    done
+
+    # 2. Remove GOLAN systemd service + timer files
+    for f in golan-watchdog.service golan-watchdog.timer \
+             golan-quota-check.service golan-quota-check.timer \
+             golan-net-recovery.service certbot-renew-golan.service certbot-renew-golan.timer \
+             universal-bridge.service rocket-proxy.service udp-custom.service \
+             vpn-panel.service openvpn-stunnel.service payload-proxy.service \
+             ovpn-ws-bridge.service; do
+        rm -f "/etc/systemd/system/$f" 2>/dev/null
+    done
+
+    # 3. Remove systemd drop-ins
+    for svc in haproxy nginx dropbear stunnel4 stunnel xray payload-proxy rocket-proxy dnsmasq udp-custom openvpn-stunnel vpn-panel universal-bridge; do
+        rm -rf "/etc/systemd/system/${svc}.service.d" 2>/dev/null
+    done
+
+    # 4. Remove OpenRC init scripts
+    for svc in universal-bridge rocket-proxy udp-custom vpn-panel openvpn-stunnel golan-watchdog golan-quota-check; do
+        rm -f "/etc/init.d/$svc" 2>/dev/null
+        rm -f "/etc/conf.d/$svc" 2>/dev/null
+    done
+
+    # 5. Remove cron entries for golan
+    crontab -l 2>/dev/null | grep -v "golan" | grep -v "certbot renew" | crontab - 2>/dev/null || true
+
+    # 6. Remove GOLAN scripts from /usr/local/bin
+    rm -f /usr/local/bin/golan 2>/dev/null
+    rm -f /usr/local/bin/golan-watchdog.sh 2>/dev/null
+    rm -f /usr/local/bin/golan-quota-check.py 2>/dev/null
+    rm -f /usr/local/bin/golan-switch-to-ovpn.sh 2>/dev/null
+    rm -f /usr/local/bin/golan-switch-to-golan.sh 2>/dev/null
+
+    # 7. Remove GOLAN directories
+    rm -rf /etc/golan 2>/dev/null
+    rm -rf /opt/universal-bridge 2>/dev/null
+    rm -rf /opt/rocket 2>/dev/null
+    rm -rf /opt/vpn-panel 2>/dev/null
+    rm -rf /root/udp 2>/dev/null
+    rm -rf /root/golan-save 2>/dev/null
+
+    # 8. Remove GOLAN config files
+    rm -f /etc/golan-banner.txt 2>/dev/null
+    rm -f /etc/stunnel/stunnel.conf 2>/dev/null
+    rm -f /etc/stunnel/stunnel.conf.disabled 2>/dev/null
+    rm -f /etc/stunnel/openvpn.conf 2>/dev/null
+    rm -f /etc/stunnel/openvpn.conf.disabled 2>/dev/null
+    rm -f /etc/haproxy/ssl.pem 2>/dev/null
+    rm -f /etc/nginx/sites-enabled/xray-proxy 2>/dev/null
+    rm -f /etc/nginx/sites-enabled/default 2>/dev/null
+    rm -rf /etc/nginx/stream-enabled 2>/dev/null
+    rm -f /usr/local/etc/xray/config.json 2>/dev/null
+    rm -rf /etc/systemd/system/xray.service.d 2>/dev/null
+
+    # 9. Remove GOLAN log files
+    rm -f /root/golan400-install.log 2>/dev/null
+    rm -f /root/golan-links.txt 2>/dev/null
+    rm -f /root/golan-browser-dialer-README.txt 2>/dev/null
+    rm -f /var/log/golan-watchdog.log 2>/dev/null
+    rm -f /var/log/golan-quota.log 2>/dev/null
+    rm -f /var/run/golan-quota.lock 2>/dev/null
+
+    # 10. Remove GOLAN sysctl entries
+    if [ -f /etc/sysctl.conf ]; then
+        sed -i '/golan-disable-ipv6/,+3d' /etc/sysctl.conf 2>/dev/null
+        sed -i '/golan-tcp-tuning/,+23d' /etc/sysctl.conf 2>/dev/null
+    fi
+    rm -f /etc/sysctl.d/99-openvpn.conf 2>/dev/null
+
+    # 11. Remove GOLAN module configs
+    rm -f /etc/modules-load.d/golan-bbr.conf 2>/dev/null
+    rm -f /etc/modules-load.d/zram.conf 2>/dev/null
+
+    # 12. Remove GOLAN security configs
+    rm -f /etc/security/limits.d/99-golan.conf 2>/dev/null
+    rm -f /etc/security/pwquality.conf 2>/dev/null
+
+    # 13. Remove GOLAN fail2ban config
+    rm -f /etc/fail2ban/jail.local 2>/dev/null
+
+    # 14. Remove GOLAN journald config
+    rm -f /etc/systemd/journald.conf.d/99-golan-persistent.conf 2>/dev/null
+    rmdir /etc/systemd/journald.conf.d 2>/dev/null
+
+    # 15. Remove GOLAN SSH config additions
+    if [ -f /etc/ssh/sshd_config ]; then
+        sed -i '/GOLAN400/d' /etc/ssh/sshd_config 2>/dev/null
+        sed -i '/^Banner /d' /etc/ssh/sshd_config 2>/dev/null
+    fi
+    rm -f /etc/ssh/sshd_config.d/00-golan-banner.conf 2>/dev/null
+
+    # 16. Remove GOLAN dropbear config (if ours)
+    if [ -f /etc/default/dropbear ] && grep -q "DROPBEAR_PORT=444" /etc/default/dropbear 2>/dev/null; then
+        rm -f /etc/default/dropbear 2>/dev/null
+    fi
+
+    # 17. Remove GOLAN bashrc entry
+    sed -i '/GOLAN400-AUTO-PANEL/d' /root/.bashrc 2>/dev/null
+    sed -i '/GOLAN400-AUTO-PANEL/,/fi/d' /root/.bashrc 2>/dev/null
+
+    # 18. Remove GOLAN iptables rules
+    iptables -t nat -D PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 5353 2>/dev/null || true
+    iptables -t nat -D OUTPUT -p udp --dport 53 -j REDIRECT --to-ports 5353 2>/dev/null || true
+    iptables -t nat -D POSTROUTING -s 10.8.0.0/24 -j MASQUERADE 2>/dev/null || true
+    iptables -D INPUT -p tcp --dport 8090 -m conntrack --ctstate NEW -m recent --set --name vpnpanel 2>/dev/null || true
+    iptables -D INPUT -p tcp --dport 8090 -m conntrack --ctstate NEW -m recent --update --seconds 60 --hitcount 20 --name vpnpanel -j DROP 2>/dev/null || true
+
+    # 19. Reload systemd
+    case "$_INIT" in
+        systemd) systemctl daemon-reload 2>/dev/null ;;
+    esac
+
+    # 20. Kill leftover processes
+    pkill -9 -f "universal-bridge" 2>/dev/null || true
+    pkill -9 -f "rocket-proxy" 2>/dev/null || true
+    pkill -9 -f "golan-watchdog" 2>/dev/null || true
+    pkill -9 -f "golan-quota-check" 2>/dev/null || true
+    pkill -9 -f "udp-custom" 2>/dev/null || true
+    pkill -9 -f "vpn-panel" 2>/dev/null || true
+
+    echo -e "  ${GREEN}Clean done${NC}"
+    log "=== CLEANUP DONE ==="
+    echo ""
+}
+
+# Run cleanup (always — safe even if nothing installed)
+golan_cleanup
+
+# 
 #  DISTRO / INIT / PACKAGE-MANAGER DETECTION
 # 
 if [ -f /etc/os-release ]; then
@@ -725,9 +883,12 @@ clean_pkg_locks
 echo -e "  ${GREEN} pkg locks clean${NC}"
 
 if [ "$PKG" = "apt" ]; then
-    echo -e "  ${CYAN}Updating system packages...${NC}"
-    DEBIAN_FRONTEND=noninteractive apt-get update -qq >/dev/null 2>&1
-    DEBIAN_FRONTEND=noninteractive apt-get upgrade -y -qq >/dev/null 2>&1
+    echo -e "  ${CYAN}Updating system packages (this may take a few minutes)...${NC}"
+    echo ""
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold"
+    echo ""
     echo -e "  ${GREEN} apt update + upgrade done${NC}"
 fi
 
