@@ -562,8 +562,16 @@ PYTDEL
   [ "$CONF" = "y" ] || [ "$CONF" = "Y" ] && reboot;;
 
  17)
+  echo -e "${CYAN}  Restarting all services...${NC}"
   for svc in dropbear "$STUNNEL_SVC" haproxy nginx xray rocket-proxy dnsmasq udp-custom universal-bridge vpn-panel openvpn@server; do
-    svc_restart "$svc" && echo -e "  ${GREEN}● $svc${NC}" || echo -e "  ${RED}● $svc${NC}"
+    svc_restart "$svc"
+    sleep 1
+    if svc_status "$svc"; then
+      echo -e "  ${GREEN}✓ $svc${NC}"
+    else
+      echo -e "  ${RED}✗ $svc${NC}"
+      journalctl -u "$svc" -n 2 --no-pager 2>/dev/null | tail -2 | sed "s/^/    /"
+    fi
   done; pause;;
 
  18)
