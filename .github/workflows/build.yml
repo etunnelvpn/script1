@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'etunnel-v1.0.0.sh'
+      - 'etunnel-v1.0.0-p2.sh'
       - 'panel/**'
       - 'components/**'
       - 'config/**'
@@ -22,13 +23,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify source is a shell script not already a binary
+      - name: Verify sources are shell scripts
         run: |
-          if file etunnel-v1.0.0.sh | grep -q "ELF"; then
-            echo "ERROR: etunnel-v1.0.0.sh is already a binary - push the .sh source file"
-            exit 1
-          fi
-          echo "Source OK: $(head -1 etunnel-v1.0.0.sh) | Lines: $(wc -l < etunnel-v1.0.0.sh)"
+          for f in etunnel-v1.0.0.sh etunnel-v1.0.0-p2.sh; do
+            if file "$f" | grep -q "ELF"; then
+              echo "ERROR: $f is already a binary - push the .sh source"
+              exit 1
+            fi
+            echo "OK: $f ($(wc -l < $f) lines)"
+          done
 
       - name: Install shc
         run: |
@@ -36,19 +39,30 @@ jobs:
           sudo apt-get install -y shc
           echo "shc: $(shc -v 2>&1 | head -1)"
 
-      - name: Keep source copy then compile with shc
+      - name: Compile both parts with shc
         run: |
-          cp etunnel-v1.0.0.sh etunnel-src-tmp.sh
-          shc -r -f etunnel-src-tmp.sh -o etunnel-v1.0.0.sh
-          rm -f etunnel-src-tmp.sh etunnel-src-tmp.sh.x.c
-          chmod +x etunnel-v1.0.0.sh
-          echo "Binary: $(du -sh etunnel-v1.0.0.sh | cut -f1)"
-          file etunnel-v1.0.0.sh
+          # Save source copies for panel extraction
+          cp etunnel-v1.0.0.sh etunnel-src-p1.sh
+          cp etunnel-v1.0.0-p2.sh etunnel-src-p2.sh
 
-      - name: Extract panel files from source copy
+          # Compile Part 1
+          shc -r -f etunnel-src-p1.sh -o etunnel-v1.0.0.sh
+          chmod +x etunnel-v1.0.0.sh
+          rm -f etunnel-src-p1.sh etunnel-src-p1.sh.x.c
+          echo "Part 1 binary: $(du -sh etunnel-v1.0.0.sh | cut -f1)"
+
+          # Compile Part 2
+          shc -r -f etunnel-src-p2.sh -o etunnel-v1.0.0-p2.sh
+          chmod +x etunnel-v1.0.0-p2.sh
+          rm -f etunnel-src-p2.sh etunnel-src-p2.sh.x.c
+          echo "Part 2 binary: $(du -sh etunnel-v1.0.0-p2.sh | cut -f1)"
+
+          file etunnel-v1.0.0.sh
+          file etunnel-v1.0.0-p2.sh
+
+      - name: Extract panel files from Part 1 source (via git)
         run: |
-          # Re-checkout source copy for extraction
-          git show HEAD:etunnel-v1.0.0.sh > etunnel-src-extract.sh
+          git show HEAD:etunnel-v1.0.0-p2.sh > etunnel-src-extract.sh
 
           awk '/^cat > \/usr\/local\/bin\/menu <<.PANEL./{found=1;next} found && /^PANEL$/{exit} found{print}' \
             etunnel-src-extract.sh > panel/etunnel && chmod +x panel/etunnel
@@ -74,13 +88,13 @@ jobs:
           TAG="v$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Commit binary and panel files
+      - name: Commit binaries and panel files
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add etunnel-v1.0.0.sh panel/ components/ config/ issue.net
+          git add etunnel-v1.0.0.sh etunnel-v1.0.0-p2.sh panel/ components/ config/ issue.net
           git diff --cached --quiet || \
-            git commit -m "build: shc binary + sync panel [${{ steps.tag.outputs.tag }}]"
+            git commit -m "build: shc binaries + sync panel [${{ steps.tag.outputs.tag }}]"
           git push
 
       - name: Create GitHub Release
@@ -101,6 +115,8 @@ jobs:
             ```
             > Protected binary — cannot be read or modified
             > Linux x86_64 (Ubuntu 20.04 / 22.04 / 24.04)
-          files: etunnel-v1.0.0.sh
+          files: |
+            etunnel-v1.0.0.sh
+            etunnel-v1.0.0-p2.sh
           draft: false
           prerelease: false
