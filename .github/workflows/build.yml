@@ -1,0 +1,106 @@
+name: Build E-TUNNEL Binary
+
+on:
+  push:
+    paths:
+      - 'etunnel-v1.0.0.sh'
+      - 'panel/**'
+      - 'components/**'
+      - 'config/**'
+      - 'issue.net'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify source is a shell script not already a binary
+        run: |
+          if file etunnel-v1.0.0.sh | grep -q "ELF"; then
+            echo "ERROR: etunnel-v1.0.0.sh is already a binary - push the .sh source file"
+            exit 1
+          fi
+          echo "Source OK: $(head -1 etunnel-v1.0.0.sh) | Lines: $(wc -l < etunnel-v1.0.0.sh)"
+
+      - name: Install shc
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shc
+          echo "shc: $(shc -v 2>&1 | head -1)"
+
+      - name: Keep source copy then compile with shc
+        run: |
+          cp etunnel-v1.0.0.sh etunnel-src-tmp.sh
+          shc -r -f etunnel-src-tmp.sh -o etunnel-v1.0.0.sh
+          rm -f etunnel-src-tmp.sh etunnel-src-tmp.sh.x.c
+          chmod +x etunnel-v1.0.0.sh
+          echo "Binary: $(du -sh etunnel-v1.0.0.sh | cut -f1)"
+          file etunnel-v1.0.0.sh
+
+      - name: Extract panel files from source copy
+        run: |
+          # Re-checkout source copy for extraction
+          git show HEAD:etunnel-v1.0.0.sh > etunnel-src-extract.sh
+
+          awk '/^cat > \/usr\/local\/bin\/menu <<.PANEL./{found=1;next} found && /^PANEL$/{exit} found{print}' \
+            etunnel-src-extract.sh > panel/etunnel && chmod +x panel/etunnel
+
+          awk '/^cat > \/usr\/local\/bin\/etunnel-watchdog.sh <<.WDPY./{found=1;next} found && /^WDPY$/{exit} found{print}' \
+            etunnel-src-extract.sh > panel/etunnel-watchdog.sh && chmod +x panel/etunnel-watchdog.sh
+
+          awk '/^cat > \/usr\/local\/bin\/etunnel-quota-check.py <<.PYCHECK./{found=1;next} found && /^PYCHECK$/{exit} found{print}' \
+            etunnel-src-extract.sh > panel/etunnel-quota-check.py
+
+          awk '/^cat > \/opt\/universal-bridge\/bridge.py << .BRIDGEEOF./{found=1;next} found && /^BRIDGEEOF$/{exit} found{print}' \
+            etunnel-src-extract.sh > components/universal-bridge/bridge.py
+
+          awk "/^cat > \/opt\/rocket\/rocket-proxy.js <<'JSEOF'/{found=1;next} found && /^JSEOF\$/{exit} found{print}" \
+            etunnel-src-extract.sh > components/rocket-proxy/rocket-proxy.js
+
+          rm -f etunnel-src-extract.sh
+          echo "panel/etunnel: $(head -1 panel/etunnel)"
+
+      - name: Set release tag
+        id: tag
+        run: |
+          TAG="v$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Commit binary and panel files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add etunnel-v1.0.0.sh panel/ components/ config/ issue.net
+          git diff --cached --quiet || \
+            git commit -m "build: shc binary + sync panel [${{ steps.tag.outputs.tag }}]"
+          git push
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "E-TUNNEL VPN ${{ steps.tag.outputs.tag }}"
+          body: |
+            ## E-TUNNEL VPN — Build by EMMKASH TECH
+
+            ### Install on your VPS
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel && chmod +x /tmp/etunnel && /tmp/etunnel
+            ```
+            ### With domain pre-set
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel && chmod +x /tmp/etunnel && /tmp/etunnel yourdomain.com
+            ```
+            > Protected binary — cannot be read or modified
+            > Linux x86_64 (Ubuntu 20.04 / 22.04 / 24.04)
+          files: etunnel-v1.0.0.sh
+          draft: false
+          prerelease: false
