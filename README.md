@@ -10,7 +10,7 @@ One command installs and configures everything: SSH, VLESS, VMESS, Trojan, OpenV
 ##  Install — Run This One Command on Your VPS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel.sh && bash /tmp/etunnel.sh
+curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel && chmod +x /tmp/etunnel && /tmp/etunnel
 ```
 
 > Must be run as **root**. You will be asked to enter your domain name during setup.
@@ -18,7 +18,7 @@ curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.
 **With domain pre-set (skips the prompt):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel.sh && bash /tmp/etunnel.sh yourdomain.com
+curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel && chmod +x /tmp/etunnel && /tmp/etunnel yourdomain.com
 ```
 
 ---
