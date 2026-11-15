@@ -1,4 +1,4 @@
-name: Build E-TUNNEL Binary
+name: Obfuscate and Sync E-TUNNEL
 
 on:
   push:
@@ -23,64 +23,52 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Verify sources are shell scripts
+      - name: Check if files are already obfuscated
+        id: check
         run: |
-          for f in etunnel-v1.0.0.sh etunnel-v1.0.0-p2.sh; do
-            if file "$f" | grep -q "ELF"; then
-              echo "ERROR: $f is already a binary - push the .sh source"
-              exit 1
-            fi
-            echo "OK: $f ($(wc -l < $f) lines)"
-          done
+          P1_LINES=$(wc -l < etunnel-v1.0.0.sh)
+          if [ "$P1_LINES" -le 10 ] && grep -q "base64 -d" etunnel-v1.0.0.sh 2>/dev/null; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Already obfuscated - skipping"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "Plain source detected ($P1_LINES lines) - will obfuscate"
+          fi
 
-      - name: Install shc
+      - name: Extract panel files from source (before obfuscation)
+        if: steps.check.outputs.skip == 'false'
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y shc
-          echo "shc: $(shc -v 2>&1 | head -1)"
-
-      - name: Compile both parts with shc
-        run: |
-          # Save source copies for panel extraction
-          cp etunnel-v1.0.0.sh etunnel-src-p1.sh
-          cp etunnel-v1.0.0-p2.sh etunnel-src-p2.sh
-
-          # Compile Part 1
-          shc -r -f etunnel-src-p1.sh -o etunnel-v1.0.0.sh
-          chmod +x etunnel-v1.0.0.sh
-          rm -f etunnel-src-p1.sh etunnel-src-p1.sh.x.c
-          echo "Part 1 binary: $(du -sh etunnel-v1.0.0.sh | cut -f1)"
-
-          # Compile Part 2
-          shc -r -f etunnel-src-p2.sh -o etunnel-v1.0.0-p2.sh
-          chmod +x etunnel-v1.0.0-p2.sh
-          rm -f etunnel-src-p2.sh etunnel-src-p2.sh.x.c
-          echo "Part 2 binary: $(du -sh etunnel-v1.0.0-p2.sh | cut -f1)"
-
-          file etunnel-v1.0.0.sh
-          file etunnel-v1.0.0-p2.sh
-
-      - name: Extract panel files from Part 1 source (via git)
-        run: |
-          git show HEAD:etunnel-v1.0.0-p2.sh > etunnel-src-extract.sh
-
+          # Extract from Part 2 which has the panel code
           awk '/^cat > \/usr\/local\/bin\/menu <<.PANEL./{found=1;next} found && /^PANEL$/{exit} found{print}' \
-            etunnel-src-extract.sh > panel/etunnel && chmod +x panel/etunnel
+            etunnel-v1.0.0-p2.sh > panel/etunnel && chmod +x panel/etunnel
 
           awk '/^cat > \/usr\/local\/bin\/etunnel-watchdog.sh <<.WDPY./{found=1;next} found && /^WDPY$/{exit} found{print}' \
-            etunnel-src-extract.sh > panel/etunnel-watchdog.sh && chmod +x panel/etunnel-watchdog.sh
+            etunnel-v1.0.0-p2.sh > panel/etunnel-watchdog.sh && chmod +x panel/etunnel-watchdog.sh
 
           awk '/^cat > \/usr\/local\/bin\/etunnel-quota-check.py <<.PYCHECK./{found=1;next} found && /^PYCHECK$/{exit} found{print}' \
-            etunnel-src-extract.sh > panel/etunnel-quota-check.py
+            etunnel-v1.0.0-p2.sh > panel/etunnel-quota-check.py
 
           awk '/^cat > \/opt\/universal-bridge\/bridge.py << .BRIDGEEOF./{found=1;next} found && /^BRIDGEEOF$/{exit} found{print}' \
-            etunnel-src-extract.sh > components/universal-bridge/bridge.py
+            etunnel-v1.0.0-p2.sh > components/universal-bridge/bridge.py
 
           awk "/^cat > \/opt\/rocket\/rocket-proxy.js <<'JSEOF'/{found=1;next} found && /^JSEOF\$/{exit} found{print}" \
-            etunnel-src-extract.sh > components/rocket-proxy/rocket-proxy.js
+            etunnel-v1.0.0-p2.sh > components/rocket-proxy/rocket-proxy.js
 
-          rm -f etunnel-src-extract.sh
-          echo "panel/etunnel: $(head -1 panel/etunnel)"
+          echo "panel/etunnel first line: $(head -1 panel/etunnel)"
+
+      - name: Obfuscate both parts with base64
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          obfuscate() {
+            local src="$1" dst="$2"
+            local b64
+            b64=$(base64 -w 0 "$src")
+            printf '#!/bin/bash\n# E-TUNNEL VPN by EMMKASH TECH\neval "$(echo '"'"'%s'"'"' | base64 -d)"\n' "$b64" > "$dst"
+            chmod +x "$dst"
+            echo "Obfuscated $src -> $dst ($(wc -l < $dst) lines)"
+          }
+          obfuscate etunnel-v1.0.0.sh    etunnel-v1.0.0.sh
+          obfuscate etunnel-v1.0.0-p2.sh etunnel-v1.0.0-p2.sh
 
       - name: Set release tag
         id: tag
@@ -88,13 +76,13 @@ jobs:
           TAG="v$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Commit binaries and panel files
+      - name: Commit obfuscated files and panel files
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add etunnel-v1.0.0.sh etunnel-v1.0.0-p2.sh panel/ components/ config/ issue.net
           git diff --cached --quiet || \
-            git commit -m "build: shc binaries + sync panel [${{ steps.tag.outputs.tag }}]"
+            git commit -m "build: obfuscate + sync panel [${{ steps.tag.outputs.tag }}]"
           git push
 
       - name: Create GitHub Release
@@ -107,14 +95,12 @@ jobs:
 
             ### Install on your VPS
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel && chmod +x /tmp/etunnel && /tmp/etunnel
+            curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel.sh && bash /tmp/etunnel.sh
             ```
             ### With domain pre-set
             ```bash
-            curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel && chmod +x /tmp/etunnel && /tmp/etunnel yourdomain.com
+            curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel.sh && bash /tmp/etunnel.sh yourdomain.com
             ```
-            > Protected binary — cannot be read or modified
-            > Linux x86_64 (Ubuntu 20.04 / 22.04 / 24.04)
           files: |
             etunnel-v1.0.0.sh
             etunnel-v1.0.0-p2.sh
