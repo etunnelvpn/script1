@@ -14,7 +14,7 @@ STUNNEL_SVC="stunnel4"; [ "$INIT_SYS" = "openrc" ] && STUNNEL_SVC="stunnel"
 svc_status() { case "$INIT_SYS" in systemd) systemctl is-active --quiet "$1" 2>/dev/null ;; openrc) rc-service "$1" status >/dev/null 2>&1 ;; esac; }
 svc_restart() { for s in "$@"; do case "$INIT_SYS" in systemd) systemctl restart "$s" 2>/dev/null ;; openrc) rc-service "$s" restart 2>/dev/null ;; esac; done; }
 pause() { read -p "  Press Enter to return..." < /dev/tty; }
-on_off() { svc_status "$1" && echo "ON/" || echo "OFF"; }
+on_off() { svc_status "$1" && echo "✓" || echo "✗"; }
 
 # ── auto-expire SSH accounts ──────────────────────────────────
 expire_ssh_accounts() {
@@ -152,12 +152,12 @@ echo "  |   TROJAN/WS/GRPC   > ${TROJAN_COUNT}  ACCOUNT PREMIUM         |"
 echo "  |   SHADOWSOCKS/WS   > ${UDP_COUNT}  ACCOUNT PREMIUM         |"
 echo "  +--------------------------------------------------+"
 echo ""
-SSH_S=$(svc_status dropbear    && echo "ON/" || echo "OFF")
-NGINX_S=$(svc_status nginx     && echo "ON/" || echo "OFF")
-WS_S=$(svc_status rocket-proxy && echo "ON/" || echo "OFF")
-DROP_S=$(svc_status dropbear   && echo "ON/" || echo "OFF")
-XRAY_SVC=$(svc_status xray    && echo "ON/" || echo "OFF")
-HAP_SVC=$(svc_status haproxy  && echo "ON/" || echo "OFF")
+SSH_S=$(svc_status dropbear    && echo "✓" || echo "✗")
+NGINX_S=$(svc_status nginx     && echo "✓" || echo "✗")
+WS_S=$(svc_status rocket-proxy && echo "✓" || echo "✗")
+DROP_S=$(svc_status dropbear   && echo "✓" || echo "✗")
+XRAY_SVC=$(svc_status xray    && echo "✓" || echo "✗")
+HAP_SVC=$(svc_status haproxy  && echo "✓" || echo "✗")
 echo -e "${CYAN}  +--------------------+-------------------+-------------------+"
 echo -e "  | SSH    : ${GREEN}${SSH_S}${NC}      ${CYAN}|${NC} NGINX  : ${GREEN}${NGINX_S}${NC}     ${CYAN}|${NC} XRAY   : ${GREEN}${XRAY_SVC}${NC}    ${CYAN}|${NC}"
 echo -e "  | WS-ePRO: ${GREEN}${WS_S}${NC}      ${CYAN}|${NC} DROPBR : ${GREEN}${DROP_S}${NC}     ${CYAN}|${NC} HAPROXY: ${GREEN}${HAP_SVC}${NC}    ${CYAN}|${NC}"
