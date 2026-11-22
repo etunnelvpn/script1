@@ -1,3 +1,84 @@
 #!/usr/bin/env python3
-# E-TUNNEL VPN by EMMKASH TECH
-import base64; exec(base64.b64decode("IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwppbXBvcnQgYXN5bmNpbywgaGFzaGxpYiwgYmFzZTY0LCBzb2NrZXQKV1NfR1VJRCA9ICIyNThFQUZBNS1FOTE0LTQ3REEtOTVDQS1DNUFCMERDODVCMTEiCmRlZiBtYWtlX2FjY2VwdF9rZXkoa2V5KToKICAgIHJldHVybiBiYXNlNjQuYjY0ZW5jb2RlKGhhc2hsaWIuc2hhMSgoa2V5ICsgV1NfR1VJRCkuZW5jb2RlKCkpLmRpZ2VzdCgpKS5kZWNvZGUoKQphc3luYyBkZWYgcmVhZF9wYXlsb2FkKHJlYWRlciwgdGltZW91dD0xLjAsIGlkbGU9MC4zKToKICAgIGRhdGEgPSBiIiI7IGxvb3AgPSBhc3luY2lvLmdldF9ldmVudF9sb29wKCkKICAgIGRlYWRsaW5lID0gbG9vcC50aW1lKCkgKyB0aW1lb3V0CiAgICB3aGlsZSBsb29wLnRpbWUoKSA8IGRlYWRsaW5lOgogICAgICAgIHRyeToKICAgICAgICAgICAgY2h1bmsgPSBhd2FpdCBhc3luY2lvLndhaXRfZm9yKHJlYWRlci5yZWFkKDQwOTYpLCB0aW1lb3V0PWlkbGUpCiAgICAgICAgICAgIGlmIG5vdCBjaHVuazogYnJlYWsKICAgICAgICAgICAgZGF0YSArPSBjaHVuawogICAgICAgICAgICBkZWFkbGluZSA9IGFzeW5jaW8uZ2V0X2V2ZW50X2xvb3AoKS50aW1lKCkgKyB0aW1lb3V0CiAgICAgICAgZXhjZXB0IGFzeW5jaW8uVGltZW91dEVycm9yOiBicmVhawogICAgcmV0dXJuIGRhdGEKYXN5bmMgZGVmIGhhbmRsZV9jbGllbnQoY3IsIGN3KToKICAgIHBlZXIgPSBjdy5nZXRfZXh0cmFfaW5mbygncGVlcm5hbWUnKQogICAgcHJpbnQoZiJbK10gTmV3OiB7cGVlcn0iLCBmbHVzaD1UcnVlKQogICAgdHJ5OgogICAgICAgIHNvY2sgPSBjdy5nZXRfZXh0cmFfaW5mbygnc29ja2V0JykKICAgICAgICBpZiBzb2NrOgogICAgICAgICAgICBzb2NrLnNldHNvY2tvcHQoc29ja2V0LlNPTF9TT0NLRVQsIHNvY2tldC5TT19LRUVQQUxJVkUsIDEpCiAgICAgICAgICAgIHNvY2suc2V0c29ja29wdChzb2NrZXQuSVBQUk9UT19UQ1AsIHNvY2tldC5UQ1BfTk9ERUxBWSwgMSkKICAgIGV4Y2VwdDogcGFzcwogICAgcGF5bG9hZCA9IGF3YWl0IHJlYWRfcGF5bG9hZChjciwgMS4wLCAwLjMpCiAgICBpZiBub3QgcGF5bG9hZDogY3cuY2xvc2UoKTsgcmV0dXJuCiAgICBmaXJzdCA9IHBheWxvYWQuc3BsaXQoYidcclxuJywgMSlbMF0uZGVjb2RlKCd1dGYtOCcsIGVycm9ycz0naWdub3JlJykKICAgIGZvcndhcmRfZmlyc3QgPSBiIiI7IHRhcmdldCA9IE5vbmU7IHByb3RvID0gIiIKICAgIGlmIGZpcnN0LnN0YXJ0c3dpdGgoJ0NPTk5FQ1QgJyk6CiAgICAgICAgY3cud3JpdGUoYidIVFRQLzEuMSAyMDAgQ29ubmVjdGlvbiBlc3RhYmxpc2hlZFxyXG5Qcm94eS1BZ2VudDogRS1UVU5ORUxcclxuXHJcbicpOyBhd2FpdCBjdy5kcmFpbigpCiAgICAgICAgdGFyZ2V0ID0gKCcxMjcuMC4wLjEnLCAxMTk0KTsgcHJvdG8gPSAiT3BlblZQTi1DT05ORUNUIgogICAgICAgIHRyeTogZm9yd2FyZF9maXJzdCA9IGF3YWl0IGFzeW5jaW8ud2FpdF9mb3IoY3IucmVhZCg2NCksIHRpbWVvdXQ9MykKICAgICAgICBleGNlcHQ6IHBhc3MKICAgIGVsc2U6CiAgICAgICAgd3Nfa2V5ID0gJ2RHaGxJSE5oYlhCc1pTQnViMjVqWlE9PScKICAgICAgICB0cnk6CiAgICAgICAgICAgIGZvciBsaW5lIGluIHBheWxvYWQuZGVjb2RlKCd1dGYtOCcsIGVycm9ycz0naWdub3JlJykuc3BsaXQoJ1xyXG4nKToKICAgICAgICAgICAgICAgIGlmICc6JyBpbiBsaW5lOgogICAgICAgICAgICAgICAgICAgIGssIHYgPSBsaW5lLnNwbGl0KCc6JywgMSkKICAgICAgICAgICAgICAgICAgICBpZiBrLnN0cmlwKCkubG93ZXIoKSA9PSAnc2VjLXdlYnNvY2tldC1rZXknOiB3c19rZXkgPSB2LnN0cmlwKCk7IGJyZWFrCiAgICAgICAgZXhjZXB0OiBwYXNzCiAgICAgICAgY3cud3JpdGUoKCdIVFRQLzEuMSAxMDEgU3dpdGNoaW5nIFByb3RvY29sc1xyXG5VcGdyYWRlOiB3ZWJzb2NrZXRcclxuQ29ubmVjdGlvbjogVXBncmFkZVxyXG5TZWMtV2ViU29ja2V0LUFjY2VwdDogJyArIG1ha2VfYWNjZXB0X2tleSh3c19rZXkpICsgJ1xyXG5cclxuJykuZW5jb2RlKCkpCiAgICAgICAgYXdhaXQgY3cuZHJhaW4oKQogICAgICAgIHRyeTogZm9yd2FyZF9maXJzdCA9IGF3YWl0IGFzeW5jaW8ud2FpdF9mb3IoY3IucmVhZCg2NCksIHRpbWVvdXQ9NSkKICAgICAgICBleGNlcHQ6IHBhc3MKICAgICAgICBpZiBmb3J3YXJkX2ZpcnN0LnN0YXJ0c3dpdGgoYidTU0gtJyk6IHRhcmdldCA9ICgnMTI3LjAuMC4xJywgMjIpOyBwcm90byA9ICJTU0giCiAgICAgICAgZWxzZTogdGFyZ2V0ID0gKCcxMjcuMC4wLjEnLCAxMTk0KTsgcHJvdG8gPSAiT3BlblZQTi1XUyIKICAgIHRyeToKICAgICAgICB0ciwgdHcgPSBhd2FpdCBhc3luY2lvLm9wZW5fY29ubmVjdGlvbigqdGFyZ2V0KQogICAgICAgIHRzID0gdHcuZ2V0X2V4dHJhX2luZm8oJ3NvY2tldCcpCiAgICAgICAgaWYgdHM6CiAgICAgICAgICAgIHRzLnNldHNvY2tvcHQoc29ja2V0LlNPTF9TT0NLRVQsIHNvY2tldC5TT19LRUVQQUxJVkUsIDEpCiAgICAgICAgICAgIHRzLnNldHNvY2tvcHQoc29ja2V0LklQUFJPVE9fVENQLCBzb2NrZXQuVENQX05PREVMQVksIDEpCiAgICBleGNlcHQgRXhjZXB0aW9uIGFzIGU6CiAgICAgICAgcHJpbnQoZiJbIV0ge3Byb3RvfSBmYWlsOiB7ZX0iLCBmbHVzaD1UcnVlKTsgY3cuY2xvc2UoKTsgcmV0dXJuCiAgICBpZiBmb3J3YXJkX2ZpcnN0OgogICAgICAgIHRyeTogdHcud3JpdGUoZm9yd2FyZF9maXJzdCk7IGF3YWl0IHR3LmRyYWluKCkKICAgICAgICBleGNlcHQ6IHBhc3MKICAgIHByaW50KGYiWytdIEFjdGl2ZToge3BlZXJ9IDwtPiB7cHJvdG99IiwgZmx1c2g9VHJ1ZSkKICAgIGFzeW5jIGRlZiBwdW1wKHNyYywgZHN0KToKICAgICAgICB0cnk6CiAgICAgICAgICAgIHdoaWxlIFRydWU6CiAgICAgICAgICAgICAgICB0cnk6IGRhdGEgPSBhd2FpdCBhc3luY2lvLndhaXRfZm9yKHNyYy5yZWFkKDY1NTM2KSwgdGltZW91dD02MDApCiAgICAgICAgICAgICAgICBleGNlcHQgYXN5bmNpby5UaW1lb3V0RXJyb3I6IGNvbnRpbnVlCiAgICAgICAgICAgICAgICBpZiBub3QgZGF0YTogYnJlYWsKICAgICAgICAgICAgICAgIHRyeTogZHN0LndyaXRlKGRhdGEpOyBhd2FpdCBkc3QuZHJhaW4oKQogICAgICAgICAgICAgICAgZXhjZXB0OiBicmVhawogICAgICAgIGV4Y2VwdDogcGFzcwogICAgdHJ5OgogICAgICAgIGF3YWl0IGFzeW5jaW8uZ2F0aGVyKHB1bXAoY3IsIHR3KSwgcHVtcCh0ciwgY3cpKQogICAgZmluYWxseToKICAgICAgICB0cnk6IHR3LmNsb3NlKCkKICAgICAgICBleGNlcHQ6IHBhc3MKICAgICAgICB0cnk6IGN3LmNsb3NlKCkKICAgICAgICBleGNlcHQ6IHBhc3MKICAgICAgICBwcmludChmIlstXSBDbG9zZWQ6IHtwZWVyfSAoe3Byb3RvfSkiLCBmbHVzaD1UcnVlKQphc3luYyBkZWYgbWFpbigpOgogICAgc2VydmVyID0gYXdhaXQgYXN5bmNpby5zdGFydF9zZXJ2ZXIoaGFuZGxlX2NsaWVudCwgJzEyNy4wLjAuMScsIDgwODApCiAgICBwcmludCgiVW5pdmVyc2FsIEJyaWRnZSBvbiAxMjcuMC4wLjE6ODA4MCIsIGZsdXNoPVRydWUpCiAgICBhc3luYyB3aXRoIHNlcnZlcjogYXdhaXQgc2VydmVyLnNlcnZlX2ZvcmV2ZXIoKQppZiBfX25hbWVfXyA9PSAnX19tYWluX18nOgogICAgdHJ5OiBhc3luY2lvLnJ1bihtYWluKCkpCiAgICBleGNlcHQgS2V5Ym9hcmRJbnRlcnJ1cHQ6IHBhc3M="))
+import asyncio, hashlib, base64, socket
+WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
+def make_accept_key(key):
+    return base64.b64encode(hashlib.sha1((key + WS_GUID).encode()).digest()).decode()
+async def read_payload(reader, timeout=1.0, idle=0.3):
+    data = b""; loop = asyncio.get_event_loop()
+    deadline = loop.time() + timeout
+    while loop.time() < deadline:
+        try:
+            chunk = await asyncio.wait_for(reader.read(4096), timeout=idle)
+            if not chunk: break
+            data += chunk
+            deadline = asyncio.get_event_loop().time() + timeout
+        except asyncio.TimeoutError: break
+    return data
+async def handle_client(cr, cw):
+    peer = cw.get_extra_info('peername')
+    print(f"[+] New: {peer}", flush=True)
+    try:
+        sock = cw.get_extra_info('socket')
+        if sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    except: pass
+    payload = await read_payload(cr, 1.0, 0.3)
+    if not payload: cw.close(); return
+    first = payload.split(b'\r\n', 1)[0].decode('utf-8', errors='ignore')
+    forward_first = b""; target = None; proto = ""
+    if first.startswith('CONNECT '):
+        cw.write(b'HTTP/1.1 200 Connection established\r\nProxy-Agent: E-TUNNEL\r\n\r\n'); await cw.drain()
+        target = ('127.0.0.1', 1194); proto = "OpenVPN-CONNECT"
+        try: forward_first = await asyncio.wait_for(cr.read(64), timeout=3)
+        except: pass
+    else:
+        ws_key = 'dGhlIHNhbXBsZSBub25jZQ=='
+        try:
+            for line in payload.decode('utf-8', errors='ignore').split('\r\n'):
+                if ':' in line:
+                    k, v = line.split(':', 1)
+                    if k.strip().lower() == 'sec-websocket-key': ws_key = v.strip(); break
+        except: pass
+        cw.write(('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ' + make_accept_key(ws_key) + '\r\n\r\n').encode())
+        await cw.drain()
+        try: forward_first = await asyncio.wait_for(cr.read(64), timeout=5)
+        except: pass
+        if forward_first.startswith(b'SSH-'): target = ('127.0.0.1', 22); proto = "SSH"
+        else: target = ('127.0.0.1', 1194); proto = "OpenVPN-WS"
+    try:
+        tr, tw = await asyncio.open_connection(*target)
+        ts = tw.get_extra_info('socket')
+        if ts:
+            ts.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            ts.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+    except Exception as e:
+        print(f"[!] {proto} fail: {e}", flush=True); cw.close(); return
+    if forward_first:
+        try: tw.write(forward_first); await tw.drain()
+        except: pass
+    print(f"[+] Active: {peer} <-> {proto}", flush=True)
+    async def pump(src, dst):
+        try:
+            while True:
+                try: data = await asyncio.wait_for(src.read(65536), timeout=600)
+                except asyncio.TimeoutError: continue
+                if not data: break
+                try: dst.write(data); await dst.drain()
+                except: break
+        except: pass
+    try:
+        await asyncio.gather(pump(cr, tw), pump(tr, cw))
+    finally:
+        try: tw.close()
+        except: pass
+        try: cw.close()
+        except: pass
+        print(f"[-] Closed: {peer} ({proto})", flush=True)
+async def main():
+    server = await asyncio.start_server(handle_client, '127.0.0.1', 8080)
+    print("Universal Bridge on 127.0.0.1:8080", flush=True)
+    async with server: await server.serve_forever()
+if __name__ == '__main__':
+    try: asyncio.run(main())
+    except KeyboardInterrupt: pass

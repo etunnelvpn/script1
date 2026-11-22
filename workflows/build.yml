@@ -1,0 +1,186 @@
+name: Obfuscate and Sync E-TUNNEL
+
+on:
+  push:
+    paths:
+      - 'etunnel-v1.0.0.sh'
+      - 'etunnel-v1.0.0-p2.sh'
+      - 'panel/**'
+      - 'components/**'
+      - 'config/**'
+      - 'issue.net'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── Check if .sh files are already obfuscated ──────────────────────
+      - name: Check if shell scripts are already obfuscated
+        id: check
+        run: |
+          P1_LINES=$(wc -l < etunnel-v1.0.0.sh)
+          if [ "$P1_LINES" -le 10 ] && grep -q "base64 -d" etunnel-v1.0.0.sh 2>/dev/null; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "Shell scripts already obfuscated - skipping shell obfuscation"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "Plain shell source detected ($P1_LINES lines) - will obfuscate"
+          fi
+
+      # ── Extract panel heredocs (only from embedded blocks in p2) ───────
+      - name: Extract panel files from source
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          awk '/^cat > \/usr\/local\/bin\/menu <<.PANEL./{found=1;next} found && /^PANEL$/{exit} found{print}' \
+            etunnel-v1.0.0-p2.sh > panel/etunnel && chmod +x panel/etunnel
+
+          awk '/^cat > \/usr\/local\/bin\/etunnel-watchdog.sh <<.WDPY./{found=1;next} found && /^WDPY$/{exit} found{print}' \
+            etunnel-v1.0.0-p2.sh > panel/etunnel-watchdog.sh && chmod +x panel/etunnel-watchdog.sh
+
+          awk '/^cat > \/usr\/local\/bin\/etunnel-quota-check.py <<.PYCHECK./{found=1;next} found && /^PYCHECK$/{exit} found{print}' \
+            etunnel-v1.0.0-p2.sh > panel/etunnel-quota-check.py
+
+          echo "panel/etunnel first line: $(head -1 panel/etunnel)"
+
+      # ── Obfuscate shell scripts ─────────────────────────────────────────
+      - name: Obfuscate shell scripts with base64
+        if: steps.check.outputs.skip == 'false'
+        run: |
+          obfuscate_sh() {
+            local src="$1" dst="$2"
+            local b64file="/tmp/sh_$$.b64"
+            local outfile="/tmp/sh_$$.out"
+            base64 -w 0 "$src" > "$b64file"
+            printf '#!/bin/bash\n# E-TUNNEL VPN by EMMKASH TECH\n' > "$outfile"
+            printf 'eval "$(echo ' >> "$outfile"
+            cat "$b64file" >> "$outfile"
+            printf ' | base64 -d)"\n' >> "$outfile"
+            chmod +x "$outfile"
+            cat "$outfile" > "$dst"
+            rm -f "$b64file" "$outfile"
+            echo "Obfuscated $src -> $dst ($(wc -c < $dst) bytes)"
+          }
+          obfuscate_sh etunnel-v1.0.0.sh    etunnel-v1.0.0.sh
+          obfuscate_sh etunnel-v1.0.0-p2.sh etunnel-v1.0.0-p2.sh
+
+      # ── Obfuscate component files (runs ALWAYS, independent of skip) ───
+      # These files live in components/ as plain source and must always be
+      # obfuscated before committing — their skip check is done per-file.
+      - name: Obfuscate component files
+        run: |
+          echo "=== Sizes at checkout ==="
+          wc -c components/universal-bridge/bridge.py \
+                 components/vpn-panel/app.py \
+                 components/rocket-proxy/rocket-proxy.js
+
+          obfuscate_py() {
+            local f="$1"
+            local b64file="/tmp/obf_$$.b64"
+            local outfile="/tmp/obf_$$.out"
+
+            # guard: skip if empty
+            [ -s "$f" ] || { echo "SKIP (empty): $f"; return; }
+
+            # guard: skip if already obfuscated
+            head -1 "$f" | grep -qF 'base64' && { echo "SKIP (done): $f"; return; }
+
+            base64 -w 0 "$f" > "$b64file"
+            echo "b64 size for $f: $(wc -c < $b64file)"
+
+            (
+              printf '%s\n' '#!/usr/bin/env python3'
+              printf '%s\n' '# E-TUNNEL VPN by EMMKASH TECH'
+              printf 'import base64; exec(base64.b64decode("'
+              cat "$b64file"
+              printf '"))\n'
+            ) > "$outfile"
+
+            echo "out size for $f: $(wc -c < $outfile)"
+            cat "$outfile" > "$f"
+            echo "final size for $f: $(wc -c < $f)"
+            rm -f "$b64file" "$outfile"
+          }
+
+          obfuscate_js() {
+            local f="$1"
+            local b64file="/tmp/obf_$$.b64"
+            local outfile="/tmp/obf_$$.out"
+
+            [ -s "$f" ] || { echo "SKIP (empty): $f"; return; }
+            head -1 "$f" | grep -qF 'base64' && { echo "SKIP (done): $f"; return; }
+
+            base64 -w 0 "$f" > "$b64file"
+            echo "b64 size for $f: $(wc -c < $b64file)"
+
+            (
+              printf '%s\n' '// E-TUNNEL VPN by EMMKASH TECH'
+              printf 'eval(Buffer.from("'
+              cat "$b64file"
+              printf '","base64").toString());\n'
+            ) > "$outfile"
+
+            echo "out size for $f: $(wc -c < $outfile)"
+            cat "$outfile" > "$f"
+            echo "final size for $f: $(wc -c < $f)"
+            rm -f "$b64file" "$outfile"
+          }
+
+          obfuscate_py components/universal-bridge/bridge.py
+          obfuscate_py components/vpn-panel/app.py
+          obfuscate_js components/rocket-proxy/rocket-proxy.js
+
+          echo "=== Final sizes ==="
+          wc -c components/universal-bridge/bridge.py \
+                 components/vpn-panel/app.py \
+                 components/rocket-proxy/rocket-proxy.js
+
+      # ── Tag + commit + push ─────────────────────────────────────────────
+      - name: Set release tag
+        id: tag
+        run: |
+          TAG="v$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Commit obfuscated files
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add etunnel-v1.0.0.sh etunnel-v1.0.0-p2.sh panel/ components/ config/ issue.net
+          if git diff --cached --quiet; then
+            echo "Nothing to commit"
+          else
+            git commit -m "build: obfuscate + sync panel [${{ steps.tag.outputs.tag }}]"
+            git pull --rebase origin main
+            git push origin main
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "E-TUNNEL VPN ${{ steps.tag.outputs.tag }}"
+          body: |
+            ## E-TUNNEL VPN — Build by EMMKASH TECH
+
+            ### Install on your VPS
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel.sh && bash /tmp/etunnel.sh
+            ```
+            ### With domain pre-set
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/etunnelvpn/script1/main/etunnel-v1.0.0.sh -o /tmp/etunnel.sh && bash /tmp/etunnel.sh yourdomain.com
+            ```
+          files: |
+            etunnel-v1.0.0.sh
+            etunnel-v1.0.0-p2.sh
+          draft: false
+          prerelease: false
