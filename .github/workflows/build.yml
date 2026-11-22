@@ -57,19 +57,16 @@ jobs:
         run: |
           obfuscate_sh() {
             local src="$1" dst="$2"
-            local tmp
-            tmp=$(mktemp)
-            base64 -w 0 "$src" > "${tmp}.b64"
-            {
-              echo '#!/bin/bash'
-              echo '# E-TUNNEL VPN by EMMKASH TECH'
-              echo -n 'eval "$(echo '\'
-              cat "${tmp}.b64"
-              echo '\' | base64 -d)"'
-            } > "$tmp"
-            chmod +x "$tmp"
-            mv "$tmp" "$dst"
-            rm -f "${tmp}.b64"
+            local b64file="/tmp/sh_$$.b64"
+            local outfile="/tmp/sh_$$.out"
+            base64 -w 0 "$src" > "$b64file"
+            printf '#!/bin/bash\n# E-TUNNEL VPN by EMMKASH TECH\n' > "$outfile"
+            printf 'eval "$(echo ' >> "$outfile"
+            cat "$b64file" >> "$outfile"
+            printf ' | base64 -d)"\n' >> "$outfile"
+            chmod +x "$outfile"
+            cat "$outfile" > "$dst"
+            rm -f "$b64file" "$outfile"
             echo "Obfuscated $src -> $dst ($(wc -c < $dst) bytes)"
           }
           obfuscate_sh etunnel-v1.0.0.sh    etunnel-v1.0.0.sh
