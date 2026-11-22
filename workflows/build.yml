@@ -80,70 +80,87 @@ jobs:
       # obfuscated before committing — their skip check is done per-file.
       - name: Obfuscate component files
         run: |
-          obfuscate_py() {
-            local src="$1"
-            local size tmp
-            size=$(wc -c < "$src")
-            if [ "$size" -eq 0 ]; then
-              echo "ERROR: $src is empty — aborting" >&2
-              exit 1
-            fi
-            if head -1 "$src" | grep -q "base64.b64decode\|exec(base64"; then
-              echo "Already obfuscated: $src — skipping"
-              return
-            fi
-            tmp=$(mktemp)
-            base64 -w 0 "$src" > "${tmp}.b64"
-            {
-              echo '#!/usr/bin/env python3'
-              echo '# E-TUNNEL VPN by EMMKASH TECH'
-              echo -n 'import base64; exec(base64.b64decode("'
-              cat "${tmp}.b64"
-              echo '"))'
-            } > "$tmp"
-            mv "$tmp" "$src"
-            rm -f "${tmp}.b64"
-            echo "Obfuscated: $src ($(wc -c < $src) bytes)"
-          }
+          set -x  # print every command so we can see exactly what runs
 
-          obfuscate_js() {
-            local src="$1"
-            local size tmp
-            size=$(wc -c < "$src")
-            if [ "$size" -eq 0 ]; then
-              echo "ERROR: $src is empty — aborting" >&2
-              exit 1
-            fi
-            if head -1 "$src" | grep -q "Buffer.from\|base64"; then
-              echo "Already obfuscated: $src — skipping"
-              return
-            fi
-            tmp=$(mktemp)
-            base64 -w 0 "$src" > "${tmp}.b64"
-            {
-              echo '// E-TUNNEL VPN by EMMKASH TECH'
-              echo -n 'require("child_process").execSync(Buffer.from("'
-              cat "${tmp}.b64"
-              echo '","base64").toString());'
-            } > "$tmp"
-            mv "$tmp" "$src"
-            rm -f "${tmp}.b64"
-            echo "Obfuscated: $src ($(wc -c < $src) bytes)"
-          }
+          echo "=== PWD: $(pwd) ==="
+          echo "=== Files present ==="
+          ls -la components/universal-bridge/bridge.py \
+                 components/vpn-panel/app.py \
+                 components/rocket-proxy/rocket-proxy.js
 
-          echo "--- Component file sizes before obfuscation ---"
-          wc -c components/universal-bridge/bridge.py \
-                components/vpn-panel/app.py \
-                components/rocket-proxy/rocket-proxy.js
+          # Obfuscate bridge.py
+          SRC="components/universal-bridge/bridge.py"
+          SIZE=$(wc -c < "$SRC")
+          echo "bridge.py size before: $SIZE"
+          FIRST=$(head -1 "$SRC")
+          echo "bridge.py first line: $FIRST"
+          if echo "$FIRST" | grep -q "base64.b64decode\|exec(base64"; then
+            echo "SKIP: bridge.py already obfuscated"
+          else
+            TMP=$(mktemp /tmp/bridge_XXXXXX.py)
+            echo "TMP file: $TMP"
+            base64 -w 0 "$SRC" > "${TMP}.b64"
+            B64SIZE=$(wc -c < "${TMP}.b64")
+            echo "base64 output size: $B64SIZE"
+            echo '#!/usr/bin/env python3'          > "$TMP"
+            echo '# E-TUNNEL VPN by EMMKASH TECH' >> "$TMP"
+            echo -n 'import base64; exec(base64.b64decode("' >> "$TMP"
+            cat "${TMP}.b64"                       >> "$TMP"
+            echo '"))'                             >> "$TMP"
+            TMPSIZE=$(wc -c < "$TMP")
+            echo "TMP size after build: $TMPSIZE"
+            cp "$TMP" "$SRC"
+            rm -f "$TMP" "${TMP}.b64"
+            echo "bridge.py final size: $(wc -c < $SRC)"
+          fi
 
-          obfuscate_py components/universal-bridge/bridge.py
-          obfuscate_py components/vpn-panel/app.py
-          obfuscate_js components/rocket-proxy/rocket-proxy.js
+          # Obfuscate app.py
+          SRC="components/vpn-panel/app.py"
+          SIZE=$(wc -c < "$SRC")
+          echo "app.py size before: $SIZE"
+          FIRST=$(head -1 "$SRC")
+          if echo "$FIRST" | grep -q "base64.b64decode\|exec(base64"; then
+            echo "SKIP: app.py already obfuscated"
+          else
+            TMP=$(mktemp /tmp/app_XXXXXX.py)
+            base64 -w 0 "$SRC" > "${TMP}.b64"
+            B64SIZE=$(wc -c < "${TMP}.b64")
+            echo "app.py base64 size: $B64SIZE"
+            echo '#!/usr/bin/env python3'          > "$TMP"
+            echo '# E-TUNNEL VPN by EMMKASH TECH' >> "$TMP"
+            echo -n 'import base64; exec(base64.b64decode("' >> "$TMP"
+            cat "${TMP}.b64"                       >> "$TMP"
+            echo '"))'                             >> "$TMP"
+            cp "$TMP" "$SRC"
+            rm -f "$TMP" "${TMP}.b64"
+            echo "app.py final size: $(wc -c < $SRC)"
+          fi
 
-          echo "--- Component file sizes after obfuscation ---"
-          wc -c components/universal-bridge/bridge.py \
-                components/vpn-panel/app.py \
-                components/rocket-proxy/rocket-proxy.js
+          # Obfuscate rocket-proxy.js
+          SRC="components/rocket-proxy/rocket-proxy.js"
+          SIZE=$(wc -c < "$SRC")
+          echo "rocket-proxy.js size before: $SIZE"
+          FIRST=$(head -1 "$SRC")
+          if echo "$FIRST" | grep -q "Buffer.from\|base64"; then
+            echo "SKIP: rocket-proxy.js already obfuscated"
+          else
+            TMP=$(mktemp /tmp/rocket_XXXXXX.js)
+            base64 -w 0 "$SRC" > "${TMP}.b64"
+            B64SIZE=$(wc -c < "${TMP}.b64")
+            echo "rocket-proxy.js base64 size: $B64SIZE"
+            echo '// E-TUNNEL VPN by EMMKASH TECH'           > "$TMP"
+            echo -n 'require("child_process").execSync(Buffer.from("' >> "$TMP"
+            cat "${TMP}.b64"                                  >> "$TMP"
+            echo '","base64").toString());'                   >> "$TMP"
+            cp "$TMP" "$SRC"
+            rm -f "$TMP" "${TMP}.b64"
+            echo "rocket-proxy.js final size: $(wc -c < $SRC)"
+          fi
+
+          echo "=== FINAL sizes ==="
+          ls -la components/universal-bridge/bridge.py \
+                 components/vpn-panel/app.py \
+                 components/rocket-proxy/rocket-proxy.js
 
       # ── Tag + commit + push ─────────────────────────────────────────────
       - name: Set release tag
