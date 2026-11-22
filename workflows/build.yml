@@ -23,22 +23,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Check if files are already obfuscated
+      # ── Check if .sh files are already obfuscated ──────────────────────
+      - name: Check if shell scripts are already obfuscated
         id: check
         run: |
           P1_LINES=$(wc -l < etunnel-v1.0.0.sh)
           if [ "$P1_LINES" -le 10 ] && grep -q "base64 -d" etunnel-v1.0.0.sh 2>/dev/null; then
             echo "skip=true" >> $GITHUB_OUTPUT
-            echo "Already obfuscated - skipping"
+            echo "Shell scripts already obfuscated - skipping shell obfuscation"
           else
             echo "skip=false" >> $GITHUB_OUTPUT
-            echo "Plain source detected ($P1_LINES lines) - will obfuscate"
+            echo "Plain shell source detected ($P1_LINES lines) - will obfuscate"
           fi
 
-      - name: Extract panel files from source (before obfuscation)
+      # ── Extract panel heredocs (only from embedded blocks in p2) ───────
+      - name: Extract panel files from source
         if: steps.check.outputs.skip == 'false'
         run: |
-          # Extract panel files that ARE embedded as heredocs in Part 2
           awk '/^cat > \/usr\/local\/bin\/menu <<.PANEL./{found=1;next} found && /^PANEL$/{exit} found{print}' \
             etunnel-v1.0.0-p2.sh > panel/etunnel && chmod +x panel/etunnel
 
@@ -48,54 +49,110 @@ jobs:
           awk '/^cat > \/usr\/local\/bin\/etunnel-quota-check.py <<.PYCHECK./{found=1;next} found && /^PYCHECK$/{exit} found{print}' \
             etunnel-v1.0.0-p2.sh > panel/etunnel-quota-check.py
 
-          # NOTE: bridge.py, rocket-proxy.js, and vpn-panel/app.py are NOT embedded
-          # as heredocs in the script — they live directly in components/ and are
-          # pulled at install time via repo_copy. Do NOT extract them from the script.
-
           echo "panel/etunnel first line: $(head -1 panel/etunnel)"
-          echo "bridge.py size: $(wc -c < components/universal-bridge/bridge.py) bytes"
-          echo "rocket-proxy.js size: $(wc -c < components/rocket-proxy/rocket-proxy.js) bytes"
-          echo "app.py size: $(wc -c < components/vpn-panel/app.py) bytes"
 
-      - name: Obfuscate both parts with base64
+      # ── Obfuscate shell scripts ─────────────────────────────────────────
+      - name: Obfuscate shell scripts with base64
         if: steps.check.outputs.skip == 'false'
         run: |
           obfuscate_sh() {
             local src="$1" dst="$2"
-            local b64
-            b64=$(base64 -w 0 "$src")
-            printf '#!/bin/bash\n# E-TUNNEL VPN by EMMKASH TECH\neval "$(echo '"'"'%s'"'"' | base64 -d)"\n' "$b64" > "$dst"
-            chmod +x "$dst"
-            echo "Obfuscated $src -> $dst ($(wc -l < $dst) lines)"
+            local tmp
+            tmp=$(mktemp)
+            base64 -w 0 "$src" > "${tmp}.b64"
+            {
+              echo '#!/bin/bash'
+              echo '# E-TUNNEL VPN by EMMKASH TECH'
+              echo -n 'eval "$(echo '\'
+              cat "${tmp}.b64"
+              echo '\' | base64 -d)"'
+            } > "$tmp"
+            chmod +x "$tmp"
+            mv "$tmp" "$dst"
+            rm -f "${tmp}.b64"
+            echo "Obfuscated $src -> $dst ($(wc -c < $dst) bytes)"
           }
           obfuscate_sh etunnel-v1.0.0.sh    etunnel-v1.0.0.sh
           obfuscate_sh etunnel-v1.0.0-p2.sh etunnel-v1.0.0-p2.sh
 
+      # ── Obfuscate component files (runs ALWAYS, independent of skip) ───
+      # These files live in components/ as plain source and must always be
+      # obfuscated before committing — their skip check is done per-file.
+      - name: Obfuscate component files
+        run: |
           obfuscate_py() {
             local src="$1"
-            local b64
-            b64=$(base64 -w 0 "$src")
-            printf '#!/usr/bin/env python3\n# E-TUNNEL VPN by EMMKASH TECH\nimport base64,os\nexec(base64.b64decode("%s"))\n' "$b64" > "$src"
-            echo "Obfuscated $src ($(wc -c < $src) bytes)"
+            local size tmp
+            size=$(wc -c < "$src")
+            if [ "$size" -eq 0 ]; then
+              echo "ERROR: $src is empty — aborting" >&2
+              exit 1
+            fi
+            if head -1 "$src" | grep -q "base64.b64decode\|exec(base64"; then
+              echo "Already obfuscated: $src — skipping"
+              return
+            fi
+            tmp=$(mktemp)
+            base64 -w 0 "$src" > "${tmp}.b64"
+            {
+              echo '#!/usr/bin/env python3'
+              echo '# E-TUNNEL VPN by EMMKASH TECH'
+              echo -n 'import base64; exec(base64.b64decode("'
+              cat "${tmp}.b64"
+              echo '"))'
+            } > "$tmp"
+            mv "$tmp" "$src"
+            rm -f "${tmp}.b64"
+            echo "Obfuscated: $src ($(wc -c < $src) bytes)"
           }
+
           obfuscate_js() {
             local src="$1"
-            local b64
-            b64=$(base64 -w 0 "$src")
-            printf '// E-TUNNEL VPN by EMMKASH TECH\nrequire("child_process").execSync(Buffer.from("%s","base64").toString());\n' "$b64" > "$src"
-            echo "Obfuscated $src ($(wc -c < $src) bytes)"
+            local size tmp
+            size=$(wc -c < "$src")
+            if [ "$size" -eq 0 ]; then
+              echo "ERROR: $src is empty — aborting" >&2
+              exit 1
+            fi
+            if head -1 "$src" | grep -q "Buffer.from\|base64"; then
+              echo "Already obfuscated: $src — skipping"
+              return
+            fi
+            tmp=$(mktemp)
+            base64 -w 0 "$src" > "${tmp}.b64"
+            {
+              echo '// E-TUNNEL VPN by EMMKASH TECH'
+              echo -n 'require("child_process").execSync(Buffer.from("'
+              cat "${tmp}.b64"
+              echo '","base64").toString());'
+            } > "$tmp"
+            mv "$tmp" "$src"
+            rm -f "${tmp}.b64"
+            echo "Obfuscated: $src ($(wc -c < $src) bytes)"
           }
+
+          echo "--- Component file sizes before obfuscation ---"
+          wc -c components/universal-bridge/bridge.py \
+                components/vpn-panel/app.py \
+                components/rocket-proxy/rocket-proxy.js
+
           obfuscate_py components/universal-bridge/bridge.py
           obfuscate_py components/vpn-panel/app.py
           obfuscate_js components/rocket-proxy/rocket-proxy.js
 
+          echo "--- Component file sizes after obfuscation ---"
+          wc -c components/universal-bridge/bridge.py \
+                components/vpn-panel/app.py \
+                components/rocket-proxy/rocket-proxy.js
+
+      # ── Tag + commit + push ─────────────────────────────────────────────
       - name: Set release tag
         id: tag
         run: |
           TAG="v$(date +'%Y.%m.%d')-$(git rev-parse --short HEAD)"
           echo "tag=$TAG" >> $GITHUB_OUTPUT
 
-      - name: Commit obfuscated files and panel files
+      - name: Commit obfuscated files
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
