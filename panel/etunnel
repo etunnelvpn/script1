@@ -25,8 +25,8 @@ expire_ssh_accounts() {
     while IFS= read -r line; do
         [ -z "$line" ] && continue
         local user expiry
-        user=$(echo "$line" | awk -F' \| ' '{print $1}')
-        expiry=$(echo "$line" | awk -F' \| ' '{print $3}')
+        user=$(echo "$line" | awk -F'|' '{print $1}')
+        expiry=$(echo "$line" | awk -F'|' '{print $3}')
         if [ -n "$expiry" ] && [[ "$expiry" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
             if [[ "$today" > "$expiry" ]]; then
                 userdel -r "$user" 2>/dev/null || userdel "$user" 2>/dev/null || true
@@ -49,8 +49,8 @@ start_device_watcher() {
             while IFS= read -r line; do
                 [ -z "$line" ] && continue
                 local user max_dev sessions
-                user=$(echo "$line" | awk -F' \| ' '{print $1}')
-                max_dev=$(echo "$line" | awk -F' \| ' '{print $4}')
+                user=$(echo "$line" | awk -F'|' '{print $1}')
+                max_dev=$(echo "$line" | awk -F'|' '{print $4}')
                 [[ "$max_dev" =~ ^[0-9]+$ ]] || continue
                 [ "$max_dev" -eq 0 ] && continue
                 sessions=$(who 2>/dev/null | awk -v u="$user" '$1==u' | wc -l)
@@ -76,6 +76,20 @@ get_vps_info() {
     VPS_IP=$(curl -4 -s --max-time 4 ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')
     ISP=$(curl -s --max-time 4 "https://ipinfo.io/${VPS_IP}/org" 2>/dev/null | sed 's/AS[0-9]* //' || echo "Unknown")
     CITY=$(curl -s --max-time 4 "https://ipinfo.io/${VPS_IP}/city" 2>/dev/null || echo "Unknown")
+}
+
+# ── online users and connected devices ───────────────────────
+get_online() {
+    SSH_ONLINE=$(who 2>/dev/null | grep -v "^root" | awk "{print \$1}" | sort -u | wc -l | tr -d " ")
+    SSH_USERS=$(who 2>/dev/null | grep -v "^root" | awk "{print \$1}" | sort -u | tr "\n" " ")
+    # V2Ray online via active connections to xray ports
+    XRAY_ONLINE=$(ss -tnp 2>/dev/null | grep -E ":1008[5-9]|:1009[0-1]" | grep -v "LISTEN" | wc -l | tr -d " ")
+    # OpenVPN connected clients
+    OVPN_ONLINE=$(cat /var/log/openvpn/status.log 2>/dev/null | grep "^CLIENT_LIST" | grep -v "HEADER" | wc -l | tr -d " ")
+    # Total SSH connections including root
+    SSH_TOTAL=$(ss -tnp 2>/dev/null | grep ":22 " | grep "ESTAB" | wc -l | tr -d " ")
+    # Dropbear connections
+    DB_TOTAL=$(ss -tnp 2>/dev/null | grep ":444 " | grep "ESTAB" | wc -l | tr -d " ")
 }
 
 # ── account counts ────────────────────────────────────────────
@@ -127,30 +141,45 @@ clear
 get_vps_info
 count_accs
 
-echo -e "${MAGENTA}  +--------------------------------------------------+"
-echo -e "  |     PREMIUM AUTOSCRIPT BY EMMKASH TECH           |"
-echo -e "  |     Contact: +254112735877                       |"
-echo -e "  +--------------------------------------------------+${NC}"
+# Set terminal title
+printf "\033]0;E-TUNNEL VPN — %s\007" "$DOMAIN"
+
+echo -e "${MAGENTA}"
+echo " +----------------------------------------------------+"
+echo " |      PREMIUM AUTOSCRIPT BY EMMKASH TECH           |"
+echo " |      Contact: +254112735877                       |"
+echo " +----------------------------------------------------+"
+echo -e "${NC}"
+echo -e "${CYAN} +----------------------------------------------------+"
+printf "${CYAN} | ${GREEN}* %-16s ${CYAN}= ${NC}%-29s${CYAN}|\n" "System OS"     "$OS_NAME"
+printf "${CYAN} | ${GREEN}* %-16s ${CYAN}= ${NC}%-29s${CYAN}|\n" "Core System"   "$CPU_CORES"
+printf "${CYAN} | ${GREEN}* %-16s ${CYAN}= ${NC}%-29s${CYAN}|\n" "Server RAM"    "${RAM_USED}/${RAM_TOTAL} MB"
+printf "${CYAN} | ${GREEN}* %-16s ${CYAN}= ${NC}%-29s${CYAN}|\n" "Uptime Server" "${UPTIME_MIN} minutes"
+printf "${CYAN} | ${GREEN}* %-16s ${CYAN}= ${NC}%-29s${CYAN}|\n" "Domain"        "$DOMAIN"
+printf "${CYAN} | ${GREEN}* %-16s ${CYAN}= ${NC}%-29s${CYAN}|\n" "IP VPS"        "$VPS_IP"
+printf "${CYAN} | ${GREEN}* %-16s ${CYAN}= ${NC}%-29s${CYAN}|\n" "ISP"           "$ISP"
+printf "${CYAN} | ${GREEN}* %-16s ${CYAN}= ${NC}%-29s${CYAN}|\n" "City"          "$CITY"
+echo -e "${CYAN} +----------------------------------------------------+${NC}"
 echo ""
-echo -e "${CYAN}  +--------------------------------------------------+"
-echo -e "  | ${GREEN}* System OS      ${CYAN}= ${NC}$OS_NAME"
-echo -e "${CYAN}  | ${GREEN}* Core System    ${CYAN}= ${NC}$CPU_CORES"
-echo -e "${CYAN}  | ${GREEN}* Server RAM     ${CYAN}= ${NC}${RAM_USED}/${RAM_TOTAL} MB"
-echo -e "${CYAN}  | ${GREEN}* Uptime Server  ${CYAN}= ${NC}${UPTIME_MIN} minutes"
-echo -e "${CYAN}  | ${GREEN}* Domain         ${CYAN}= ${NC}$DOMAIN"
-echo -e "${CYAN}  | ${GREEN}* IP VPS         ${CYAN}= ${NC}$VPS_IP"
-echo -e "${CYAN}  | ${GREEN}* ISP            ${CYAN}= ${NC}$ISP"
-echo -e "${CYAN}  | ${GREEN}* City           ${CYAN}= ${NC}$CITY"
-echo -e "${CYAN}  +--------------------------------------------------+${NC}"
+echo -e "${YELLOW}          >>> YOUR ACCOUNT ON VPS <<<${NC}"
+echo " +----------------------------------------------------+"
+printf " | %-20s  >  %-3s  ACCOUNT PREMIUM        |\n" "SSH/OPENVPN"    "$SSH_COUNT"
+printf " | %-20s  >  %-3s  ACCOUNT PREMIUM        |\n" "VMESS/WS/GRPC"  "$V2RAY_COUNT"
+printf " | %-20s  >  %-3s  ACCOUNT PREMIUM        |\n" "VLESS/WS/GRPC"  "$V2RAY_COUNT"
+printf " | %-20s  >  %-3s  ACCOUNT PREMIUM        |\n" "TROJAN/WS/GRPC" "$TROJAN_COUNT"
+printf " | %-20s  >  %-3s  ACCOUNT PREMIUM        |\n" "SHADOWSOCKS/WS" "$UDP_COUNT"
+echo " +----------------------------------------------------+"
 echo ""
-echo -e "${YELLOW}             >>> YOUR ACCOUNT ON VPS <<<${NC}"
-echo "  +--------------------------------------------------+"
-echo "  |   SSH/OPENVPN      > ${SSH_COUNT}  ACCOUNT PREMIUM         |"
-echo "  |   VMESS/WS/GRPC    > ${V2RAY_COUNT}  ACCOUNT PREMIUM         |"
-echo "  |   VLESS/WS/GRPC    > ${V2RAY_COUNT}  ACCOUNT PREMIUM         |"
-echo "  |   TROJAN/WS/GRPC   > ${TROJAN_COUNT}  ACCOUNT PREMIUM         |"
-echo "  |   SHADOWSOCKS/WS   > ${UDP_COUNT}  ACCOUNT PREMIUM         |"
-echo "  +--------------------------------------------------+"
+get_online
+echo -e "${YELLOW}          >>> ONLINE USERS & CONNECTIONS <<<${NC}"
+echo " +----------------------------------------------------+"
+printf " | %-22s : ${GREEN}%-24s${NC} |\n" "SSH Online Users"  "${SSH_ONLINE:-0}"
+printf " | %-22s : ${GREEN}%-24s${NC} |\n" "SSH Connections"   "${SSH_TOTAL:-0}"
+printf " | %-22s : ${GREEN}%-24s${NC} |\n" "Dropbear (port 444)" "${DB_TOTAL:-0}"
+printf " | %-22s : ${GREEN}%-24s${NC} |\n" "V2Ray/Xray Active" "${XRAY_ONLINE:-0}"
+printf " | %-22s : ${GREEN}%-24s${NC} |\n" "OpenVPN Clients"   "${OVPN_ONLINE:-0}"
+[ -n "$SSH_USERS" ] && printf " | %-22s : ${GREEN}%-24s${NC} |\n" "Users" "${SSH_USERS:0:24}"
+echo " +----------------------------------------------------+"
 echo ""
 SSH_S=$(svc_status dropbear    && echo "✓" || echo "✗")
 NGINX_S=$(svc_status nginx     && echo "✓" || echo "✗")
@@ -158,25 +187,24 @@ WS_S=$(svc_status rocket-proxy && echo "✓" || echo "✗")
 DROP_S=$(svc_status dropbear   && echo "✓" || echo "✗")
 XRAY_SVC=$(svc_status xray    && echo "✓" || echo "✗")
 HAP_SVC=$(svc_status haproxy  && echo "✓" || echo "✗")
-echo -e "${CYAN}  +--------------------+-------------------+-------------------+"
-echo -e "  | SSH    : ${GREEN}${SSH_S}${NC}      ${CYAN}|${NC} NGINX  : ${GREEN}${NGINX_S}${NC}     ${CYAN}|${NC} XRAY   : ${GREEN}${XRAY_SVC}${NC}    ${CYAN}|${NC}"
-echo -e "  | WS-ePRO: ${GREEN}${WS_S}${NC}      ${CYAN}|${NC} DROPBR : ${GREEN}${DROP_S}${NC}     ${CYAN}|${NC} HAPROXY: ${GREEN}${HAP_SVC}${NC}    ${CYAN}|${NC}"
-echo -e "${CYAN}  +--------------------+-------------------+-------------------+${NC}"
+printf "${CYAN} +------------------+------------------+------------------+${NC}\n"
+printf " | SSH    : ${GREEN}%-9s${NC} | NGINX  : ${GREEN}%-9s${NC} | XRAY   : ${GREEN}%-7s${NC} |\n" "$SSH_S" "$NGINX_S" "$XRAY_SVC"
+printf " | WS-ePRO: ${GREEN}%-9s${NC} | DROPBR : ${GREEN}%-9s${NC} | HAPROXY: ${GREEN}%-7s${NC} |\n" "$WS_S" "$DROP_S" "$HAP_SVC"
+printf "${CYAN} +------------------+------------------+------------------+${NC}\n"
 echo ""
-echo -e "${CYAN}  [01]${NC} SSH MENU         ${CYAN}[08]${NC} DELL ALL EXP    ${CYAN}[15]${NC} BCKP/RSTR"
-echo -e "${CYAN}  [02]${NC} VMESS MENU       ${CYAN}[09]${NC} AUTOREBOOT      ${CYAN}[16]${NC} REBOOT"
-echo -e "${CYAN}  [03]${NC} VLESS MENU       ${CYAN}[10]${NC} INFO PORT       ${CYAN}[17]${NC} RESTART"
-echo -e "${CYAN}  [04]${NC} TROJAN MENU      ${CYAN}[11]${NC} SPEEDTEST       ${CYAN}[18]${NC} DOMAIN"
-echo -e "${CYAN}  [05]${NC} SHADOW MENU      ${CYAN}[12]${NC} RUNNING         ${CYAN}[19]${NC} CERT SSL"
-echo -e "${CYAN}  [06]${NC} LIMIT SPEED      ${CYAN}[13]${NC} CLEAR LOG       ${CYAN}[20]${NC} INS. UDP"
-echo -e "${CYAN}  [07]${NC} VPS INFO         ${CYAN}[14]${NC} Cek Bandwith    ${CYAN}[21]${NC} CLEAR CACHE"
-echo -e "${CYAN}  [22]${NC} BOT NOTIF        ${CYAN}[23]${NC} UPDATE SCRIPT"
+printf " ${CYAN}[01]${NC} %-16s  ${CYAN}[08]${NC} %-15s  ${CYAN}[15]${NC} %s\n" "SSH MENU"    "DELL ALL EXP"  "BCKP/RSTR"
+printf " ${CYAN}[02]${NC} %-16s  ${CYAN}[09]${NC} %-15s  ${CYAN}[16]${NC} %s\n" "VMESS MENU"  "AUTOREBOOT"    "REBOOT"
+printf " ${CYAN}[03]${NC} %-16s  ${CYAN}[10]${NC} %-15s  ${CYAN}[17]${NC} %s\n" "VLESS MENU"  "INFO PORT"     "RESTART"
+printf " ${CYAN}[04]${NC} %-16s  ${CYAN}[11]${NC} %-15s  ${CYAN}[18]${NC} %s\n" "TROJAN MENU" "SPEEDTEST"     "DOMAIN"
+printf " ${CYAN}[05]${NC} %-16s  ${CYAN}[12]${NC} %-15s  ${CYAN}[19]${NC} %s\n" "SHADOW MENU" "RUNNING"       "CERT SSL"
+printf " ${CYAN}[06]${NC} %-16s  ${CYAN}[13]${NC} %-15s  ${CYAN}[20]${NC} %s\n" "LIMIT SPEED" "CLEAR LOG"     "INS. UDP"
+printf " ${CYAN}[07]${NC} %-16s  ${CYAN}[14]${NC} %-15s  ${CYAN}[21]${NC} %s\n" "VPS INFO"    "Cek Bandwith"  "CLEAR CACHE"
+printf " ${CYAN}[22]${NC} %-16s  ${CYAN}[23]${NC} %s\n"                         "BOT NOTIF"   "UPDATE SCRIPT"
 echo ""
-echo -e "  ${GREEN}[25] CHANGE BANNER <<<${NC}"
-echo -e "  ${RED}[ 0] BACK TO EXIT MENU <<<${NC}"
+echo -e " ${GREEN}[25] CHANGE BANNER <<<${NC}"
+echo -e " ${RED}[ 0] BACK TO EXIT MENU <<<${NC}"
 echo ""
-read -t 120 -p "  E-TUNNEL@VPS: " CH < /dev/tty || CH=""
-
+read -t 120 -p " E-TUNNEL@VPS: " CH < /dev/tty || CH=""
 case $CH in
  ""|" ") continue;;
 
@@ -214,7 +242,7 @@ case $CH in
     read -p "  Number (0=cancel): " IDX < /dev/tty
     [ -z "$IDX" ] || [ "$IDX" = "0" ] && continue
     LINE=$(sed -n "${IDX}p" "$ACC_DIR/ssh.txt")
-    U=$(echo "$LINE" | awk -F' \| ' '{print $1}')
+    U=$(echo "$LINE" | awk -F'|' '{print $1}')
     if [ -n "$U" ] && id "$U" >/dev/null 2>&1; then
       userdel -r "$U" 2>/dev/null || userdel "$U" 2>/dev/null
       sed -i "${IDX}d" "$ACC_DIR/ssh.txt"
@@ -234,8 +262,46 @@ case $CH in
     done < "$ACC_DIR/ssh.txt"
     pause;;
    4)
-    echo -e "${CYAN}  Online SSH Users:${NC}"
-    who 2>/dev/null | awk '$1!="root"{print "  " $1 " — " $2 " " $3 " " $4}' || echo "  None"
+    clear
+    echo -e "${CYAN}  ══════════ ONLINE USERS & DEVICES ══════════${NC}"
+    echo ""
+    echo -e "${YELLOW}  SSH Users (port 22):${NC}"
+    WHO=$(who 2>/dev/null | grep -v "^root" 2>/dev/null)
+    if [ -n "$WHO" ]; then
+      printf "  %-16s %-12s %-20s\n" "USER" "TTY" "LOGIN TIME"
+      echo "  ──────────────────────────────────────────"
+      echo "$WHO" | awk "{printf \"  %-16s %-12s %-20s\n\", \$1, \$2, \$3\" \"\$4}"
+    else
+      echo "  None currently logged in"
+    fi
+    echo ""
+    echo -e "${YELLOW}  All SSH connections (ports 22+444):${NC}"
+    SS22=$(ss -tnp 2>/dev/null | grep "ESTAB" | grep ":22 ")
+    SS444=$(ss -tnp 2>/dev/null | grep "ESTAB" | grep ":444 ")
+    echo "  Port 22  : $(echo "$SS22" | grep -c ESTAB 2>/dev/null || echo 0) connection(s)"
+    echo "  Port 444 : $(echo "$SS444" | grep -c ESTAB 2>/dev/null || echo 0) connection(s)"
+    echo ""
+    echo -e "${YELLOW}  V2Ray/Xray active connections:${NC}"
+    XC=$(ss -tnp 2>/dev/null | grep -c ESTAB | tr -d " ")
+    echo "  Total active: ${XC:-0}"
+    echo ""
+    echo -e "${YELLOW}  Device limit status:${NC}"
+    VIO=0
+    [ -s "$ACC_DIR/ssh.txt" ] && while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      u=$(echo "$line" | cut -d"|" -f1 | tr -d " ")
+      mx=$(echo "$line" | cut -d"|" -f4 | tr -d " ")
+      [[ "$mx" =~ ^[0-9]+$ ]] || continue
+      [ "$mx" -eq 0 ] && continue
+      sess=$(who 2>/dev/null | awk -v u="$u" "\$1==u" | wc -l)
+      if [ "$sess" -gt "$mx" ]; then
+        echo -e "  ${RED}OVER LIMIT: $u — $sess/$mx sessions${NC}"
+        VIO=$((VIO+1))
+      else
+        echo -e "  ${GREEN}OK: $u — $sess/$mx sessions${NC}"
+      fi
+    done < "$ACC_DIR/ssh.txt"
+    [ $VIO -eq 0 ] && echo "  All users within device limits"
     pause;;
    5)
     read -p "  Username to unsuspend: " U < /dev/tty
@@ -285,7 +351,7 @@ PY
     read -p "  Number (0=cancel): " IDX < /dev/tty
     [ -z "$IDX" ] || [ "$IDX" = "0" ] && continue
     LINE=$(sed -n "${IDX}p" "$ACC_DIR/v2ray.txt")
-    UUID=$(echo "$LINE"|awk -F' \| ' '{print $2}'|xargs)
+    UUID=$(echo "$LINE"|awk -F'|' '{print $2}'|xargs)
     [ -n "$UUID" ] && python3 - "$UUID" "$XRAY_CONF" <<'PY'
 import json,sys
 u=sys.argv[1]; p=sys.argv[2]
@@ -346,7 +412,7 @@ PY
     read -p "  Number (0=cancel): " IDX < /dev/tty
     [ -z "$IDX" ] || [ "$IDX" = "0" ] && continue
     LINE=$(sed -n "${IDX}p" "$ACC_DIR/v2ray.txt")
-    UUID=$(echo "$LINE"|awk -F' \| ' '{print $2}'|xargs)
+    UUID=$(echo "$LINE"|awk -F'|' '{print $2}'|xargs)
     [ -n "$UUID" ] && python3 - "$UUID" "$XRAY_CONF" <<'PY'
 import json,sys
 u=sys.argv[1]; p=sys.argv[2]
@@ -407,7 +473,7 @@ PYTROJ
     cat -n "$ACC_DIR/trojan.txt"
     read -p "  Number (0=cancel): " IDX < /dev/tty
     [ -z "$IDX" ] || [ "$IDX" = "0" ] && continue
-    TPW=$(sed -n "${IDX}p" "$ACC_DIR/trojan.txt"|awk -F' \| ' '{print $2}'|xargs)
+    TPW=$(sed -n "${IDX}p" "$ACC_DIR/trojan.txt"|awk -F'|' '{print $2}'|xargs)
     [ -n "$TPW" ] && python3 - "$TPW" "$XRAY_CONF" <<'PYTDEL'
 import json,sys
 pw=sys.argv[1]; p=sys.argv[2]
@@ -454,7 +520,7 @@ PYTDEL
     cat -n "$ACC_DIR/udp.txt"
     read -p "  Number (0=cancel): " IDX < /dev/tty
     [ -z "$IDX" ] || [ "$IDX" = "0" ] && continue
-    U=$(sed -n "${IDX}p" "$ACC_DIR/udp.txt"|awk -F' \| ' '{print $1}')
+    U=$(sed -n "${IDX}p" "$ACC_DIR/udp.txt"|awk -F'|' '{print $1}')
     if [ -n "$U" ] && id "$U" >/dev/null 2>&1; then
       userdel -r "$U" 2>/dev/null || userdel "$U" 2>/dev/null
       sed -i "${IDX}d" "$ACC_DIR/udp.txt"; echo -e "${GREEN}  Done${NC}"
@@ -464,21 +530,29 @@ PYTDEL
    0) break;;
   esac
   done;;
-
  6|06)
-  echo -e "${CYAN}  ${YELLOW}[1]${NC} Set speed limit   ${YELLOW}[2]${NC} Remove limit   ${YELLOW}[0]${NC} Back"
+  NIC=$(ip route get 8.8.8.8 2>/dev/null | awk "{print \$5; exit}")
+  [ -z "$NIC" ] && NIC="eth0"
+  echo -e "${CYAN}  Interface: ${GREEN}$NIC${NC}"
+  echo -e "  ${YELLOW}[1]${NC} Set limit   ${YELLOW}[2]${NC} Remove limit   ${YELLOW}[3]${NC} Show limits   ${YELLOW}[0]${NC} Back"
   read -p "  Choice: " SLC < /dev/tty
   case $SLC in
    1)
-    read -p "  Username: " U < /dev/tty; read -p "  Speed (e.g. 1mbit): " SPD < /dev/tty
-    tc qdisc add dev eth0 root handle 1: htb default 10 2>/dev/null || true
+    read -p "  Username: " U < /dev/tty
+    ! id "$U" >/dev/null 2>&1 && { echo -e "${RED}  User not found${NC}"; pause; break; }
+    read -p "  Speed (e.g. 1mbit 512kbit): " SPD < /dev/tty
     UID_NUM=$(id -u "$U" 2>/dev/null)
-    tc class add dev eth0 parent 1: classid 1:${UID_NUM} htb rate "$SPD" 2>/dev/null && \
-      echo -e "${GREEN}  Limit set${NC}" || echo -e "${RED}  Failed${NC}"; pause;;
+    tc qdisc add dev "$NIC" root handle 1: htb default 10 2>/dev/null || true
+    tc class replace dev "$NIC" parent 1: classid 1:${UID_NUM} htb rate "$SPD" 2>/dev/null && \
+      echo -e "${GREEN}  Limit $SPD set for $U${NC}" || echo -e "${RED}  Failed${NC}"; pause;;
    2)
     read -p "  Username: " U < /dev/tty; UID_NUM=$(id -u "$U" 2>/dev/null)
-    tc class del dev eth0 classid 1:${UID_NUM} 2>/dev/null && \
-      echo -e "${GREEN}  Removed${NC}" || echo -e "${RED}  Not found${NC}"; pause;;
+    tc class del dev "$NIC" classid 1:${UID_NUM} 2>/dev/null && \
+      echo -e "${GREEN}  Removed for $U${NC}" || echo -e "${YELLOW}  No limit for $U${NC}"; pause;;
+   3)
+    echo -e "${CYAN}  Limits on $NIC:${NC}"
+    tc class show dev "$NIC" 2>/dev/null | grep -v "^$" || echo "  None"
+    pause;;
   esac;;
 
  7|07)
@@ -611,7 +685,34 @@ PYTDEL
   echo -e "  ${GREEN}Cache cleared${NC}"; pause;;
 
  22)
-  echo -e "  ${YELLOW}Bot notification feature — coming soon${NC}"; pause;;
+  clear
+  echo -e "${CYAN}  ══════════ BOT NOTIF (Telegram) ══════════${NC}"
+  TGCONF="/etc/etunnel/telegram.conf"
+  CUR_TOKEN=$(grep "^TOKEN=" "$TGCONF" 2>/dev/null | cut -d= -f2)
+  CUR_CHAT=$(grep "^CHAT_ID=" "$TGCONF" 2>/dev/null | cut -d= -f2)
+  echo -e "  Token  : ${GREEN}${CUR_TOKEN:-not set}${NC}"
+  echo -e "  Chat ID: ${GREEN}${CUR_CHAT:-not set}${NC}"
+  echo ""
+  echo -e "  ${YELLOW}[1]${NC} Setup   ${YELLOW}[2]${NC} Test   ${YELLOW}[3]${NC} Disable   ${YELLOW}[0]${NC} Back"
+  read -p "  Choice: " BTC < /dev/tty
+  case $BTC in
+   1)
+    echo -e "  Get token from @BotFather on Telegram"
+    read -p "  Bot Token: " TG_TOKEN < /dev/tty
+    read -p "  Chat ID: " TG_CHAT < /dev/tty
+    if [ -n "$TG_TOKEN" ] && [ -n "$TG_CHAT" ]; then
+      printf "TOKEN=%s\nCHAT_ID=%s\n" "$TG_TOKEN" "$TG_CHAT" > "$TGCONF"
+      chmod 600 "$TGCONF"
+      echo -e "  ${GREEN}Saved${NC}"
+    fi;;
+   2)
+    [ -z "$CUR_TOKEN" ] && { echo -e "  ${RED}Not configured${NC}"; pause; break; }
+    R=$(curl -s -X POST "https://api.telegram.org/bot${CUR_TOKEN}/sendMessage" \
+      --data-urlencode "chat_id=${CUR_CHAT}" \
+      --data-urlencode "text=E-TUNNEL VPN test from ${DOMAIN}" 2>/dev/null)
+    echo "$R" | grep -q "ok.*true" && echo -e "  ${GREEN}Sent!${NC}" || echo -e "  ${RED}Failed — check token/Chat ID${NC}";;
+   3) rm -f "$TGCONF"; echo -e "  ${GREEN}Disabled${NC}";;
+  esac; pause;;
 
  23)
   clear
