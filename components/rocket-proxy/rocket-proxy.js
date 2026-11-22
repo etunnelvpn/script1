@@ -1,20 +1,2 @@
-﻿const http = require('http');
-const net = require('net');
-const server = http.createServer((req, res) => { res.writeHead(403); res.end('Forbidden'); });
-server.on('upgrade', (req, socket, head) => {
-    socket.setNoDelay(true);
-    socket.write('HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n');
-    const sshSocket = net.connect(22, '127.0.0.1', () => {
-        sshSocket.setNoDelay(true);
-        if (head && head.length) sshSocket.write(head);
-        socket.on('data', (c) => { if (!sshSocket.destroyed) sshSocket.write(c); });
-        sshSocket.on('data', (c) => { if (!socket.destroyed) socket.write(c); });
-        socket.on('end', () => sshSocket.end());
-        sshSocket.on('end', () => socket.end());
-        socket.on('error', () => sshSocket.destroy());
-        sshSocket.on('error', () => socket.destroy());
-    });
-});
-server.keepAliveTimeout = 65000;
-server.headersTimeout = 66000;
-server.listen(8081, '127.0.0.1', () => { console.log('Rocket Proxy on 8081'); });
+// E-TUNNEL VPN by EMMKASH TECH
+eval(Buffer.from("77u/Y29uc3QgaHR0cCA9IHJlcXVpcmUoJ2h0dHAnKTsKY29uc3QgbmV0ID0gcmVxdWlyZSgnbmV0Jyk7CmNvbnN0IHNlcnZlciA9IGh0dHAuY3JlYXRlU2VydmVyKChyZXEsIHJlcykgPT4geyByZXMud3JpdGVIZWFkKDQwMyk7IHJlcy5lbmQoJ0ZvcmJpZGRlbicpOyB9KTsKc2VydmVyLm9uKCd1cGdyYWRlJywgKHJlcSwgc29ja2V0LCBoZWFkKSA9PiB7CiAgICBzb2NrZXQuc2V0Tm9EZWxheSh0cnVlKTsKICAgIHNvY2tldC53cml0ZSgnSFRUUC8xLjEgMTAxIFN3aXRjaGluZyBQcm90b2NvbHNcclxuVXBncmFkZTogd2Vic29ja2V0XHJcbkNvbm5lY3Rpb246IFVwZ3JhZGVcclxuXHJcbicpOwogICAgY29uc3Qgc3NoU29ja2V0ID0gbmV0LmNvbm5lY3QoMjIsICcxMjcuMC4wLjEnLCAoKSA9PiB7CiAgICAgICAgc3NoU29ja2V0LnNldE5vRGVsYXkodHJ1ZSk7CiAgICAgICAgaWYgKGhlYWQgJiYgaGVhZC5sZW5ndGgpIHNzaFNvY2tldC53cml0ZShoZWFkKTsKICAgICAgICBzb2NrZXQub24oJ2RhdGEnLCAoYykgPT4geyBpZiAoIXNzaFNvY2tldC5kZXN0cm95ZWQpIHNzaFNvY2tldC53cml0ZShjKTsgfSk7CiAgICAgICAgc3NoU29ja2V0Lm9uKCdkYXRhJywgKGMpID0+IHsgaWYgKCFzb2NrZXQuZGVzdHJveWVkKSBzb2NrZXQud3JpdGUoYyk7IH0pOwogICAgICAgIHNvY2tldC5vbignZW5kJywgKCkgPT4gc3NoU29ja2V0LmVuZCgpKTsKICAgICAgICBzc2hTb2NrZXQub24oJ2VuZCcsICgpID0+IHNvY2tldC5lbmQoKSk7CiAgICAgICAgc29ja2V0Lm9uKCdlcnJvcicsICgpID0+IHNzaFNvY2tldC5kZXN0cm95KCkpOwogICAgICAgIHNzaFNvY2tldC5vbignZXJyb3InLCAoKSA9PiBzb2NrZXQuZGVzdHJveSgpKTsKICAgIH0pOwp9KTsKc2VydmVyLmtlZXBBbGl2ZVRpbWVvdXQgPSA2NTAwMDsKc2VydmVyLmhlYWRlcnNUaW1lb3V0ID0gNjYwMDA7CnNlcnZlci5saXN0ZW4oODA4MSwgJzEyNy4wLjAuMScsICgpID0+IHsgY29uc29sZS5sb2coJ1JvY2tldCBQcm94eSBvbiA4MDgxJyk7IH0pOw==","base64").toString());

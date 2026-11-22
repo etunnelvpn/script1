@@ -136,29 +136,15 @@ start_device_watcher
 # ═══════════════════════════════════════════════════════════════
 #  DASHBOARD RENDER HELPERS
 # ═══════════════════════════════════════════════════════════════
-
-# Fixed inner width — 52 visible chars between the outer | | borders.
-# Total line = 2 (border+space) + 52 + 2 (space+border) = 56 chars wide.
 _W=52
-
 _hline() {
-    # Usage: _hline COLOR CHAR
-    # Prints a full-width horizontal border line.
     local c="$1" ch="$2"
     printf "${c}+"
     printf "%0.s${ch}" $(seq 1 $((_W+2)))
     printf "+${NC}\n"
 }
-
-_row() {
-    # Usage: _row LINECOLOR CONTENT_STRING
-    # CONTENT_STRING must be exactly _W visible chars wide.
-    printf "${1}| ${NC}${2}${1} |${NC}\n"
-}
-
+_row() { printf "${1}| ${NC}${2}${1} |${NC}\n"; }
 _center() {
-    # Usage: _center WIDTH STRING
-    # Returns string padded with spaces to center it in WIDTH visible chars.
     local w="$1" s="$2"
     local len=${#s}
     local pad=$(( (w - len) / 2 ))
@@ -227,8 +213,6 @@ XRAY_SVC=$(svc_status xray  && echo "✓" || echo "✗")
 WS_S=$(svc_status rocket-proxy && echo "✓" || echo "✗")
 DROP_S=$(svc_status dropbear   && echo "✓" || echo "✗")
 HAP_SVC=$(svc_status haproxy   && echo "✓" || echo "✗")
-
-# Each column: 17 visible chars wide  → 3×17 + 2 separators = 53  fits in _W+1
 printf "${CYAN}+%-17s+%-17s+%-17s+${NC}\n" "-----------------" "-----------------" "-----------------"
 printf "${CYAN}|${NC} SSH     : $([ "$SSH_S"   = "✓" ] && echo "${GREEN}" || echo "${RED}")%-6s${NC}${CYAN}|${NC} NGINX   : $([ "$NGINX_S"  = "✓" ] && echo "${GREEN}" || echo "${RED}")%-6s${NC}${CYAN}|${NC} XRAY    : $([ "$XRAY_SVC" = "✓" ] && echo "${GREEN}" || echo "${RED}")%-6s${NC}${CYAN}|${NC}\n" "$SSH_S"   "$NGINX_S"  "$XRAY_SVC"
 printf "${CYAN}|${NC} WS-ePRO : $([ "$WS_S"    = "✓" ] && echo "${GREEN}" || echo "${RED}")%-6s${NC}${CYAN}|${NC} DROPBR  : $([ "$DROP_S"   = "✓" ] && echo "${GREEN}" || echo "${RED}")%-6s${NC}${CYAN}|${NC} HAPROXY : $([ "$HAP_SVC"  = "✓" ] && echo "${GREEN}" || echo "${RED}")%-6s${NC}${CYAN}|${NC}\n" "$WS_S"    "$DROP_S"   "$HAP_SVC"
@@ -236,10 +220,6 @@ printf "${CYAN}+%-17s+%-17s+%-17s+${NC}\n" "-----------------" "----------------
 echo ""
 
 # ── MAIN MENU ─────────────────────────────────────────────────
-# Three columns, each option field is fixed width so right border lines up.
-# Col1: "[NN] LABEL"  padded to 20 chars visible
-# Col2: "[NN] LABEL"  padded to 20 chars visible
-# Col3: "[NN] LABEL"  no trailing pad needed
 _hline "${CYAN}" "-"
 printf "${CYAN}|${NC} ${CYAN}[01]${NC} %-14s  ${CYAN}[08]${NC} %-14s  ${CYAN}[15]${NC} %-9s${CYAN}|${NC}\n" "SSH MENU"    "DELL ALL EXP"  "BCKP/RSTR"
 printf "${CYAN}|${NC} ${CYAN}[02]${NC} %-14s  ${CYAN}[09]${NC} %-14s  ${CYAN}[16]${NC} %-9s${CYAN}|${NC}\n" "VMESS MENU"  "AUTOREBOOT"    "REBOOT"
